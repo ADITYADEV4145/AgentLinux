@@ -4,6 +4,8 @@ An agent-controlled Linux desktop on an Apple silicon Mac. Cloud is future work.
 
 **Local developer release candidate 0.5.0-rc.1:** real Debian/Xfce desktop, Chromium/Firefox, guest-only screenshots/input/commands, official-SDK MCP, a view-only Kitty viewer and authenticated live loopback fallback. Tested on one development Mac; not a production/security certification. No binary release or VM image is published by this phase.
 
+**Modern desktop direction:** [Ubuntu 26.04.1 LTS / GNOME 50 evaluation](docs/desktop-quality.md) now has actual Mac/Wayland screenshots and input feasibility evidence. It is a proposed next profile, not the current CLI default; full GNOME/MCP/viewer integration is still gated. The working Debian/X11 backend is preserved.
+
 ## Install and first demo
 
 Prerequisites: **Go 1.26.1**, **Python 3.10+**, Git/macOS developer tools, external **Lima 2.2.1**, OpenSSH, Apple silicon, and at least **30 GiB free** for the default VM. macOS **26.5 (25F71)** is tested; macOS 14+ is a development target. Initial creation downloads a pinned **337,510,400-byte (~322 MiB)** Debian image plus changing apt packages; Internet is required. No offline network-isolation mode is offered.

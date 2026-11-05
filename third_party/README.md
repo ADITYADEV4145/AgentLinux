@@ -41,3 +41,6 @@ Phase 4 adds `golang.org/x/term` v0.40.0 (BSD-3-Clause; exact x-term.LICENSE ret
 
 
 Phase 5 adds only original Go/Python code using the standard libraries and existing pinned modules. The local package contains our CLI/helper, documentation, Go module/build dependency inventory and retained licenses. It excludes Lima, Kitty, Debian disks, installed guest packages, test browser binaries and the Go compiler. The original copyright/license notice must accompany redistribution; do not remove mixed upstream notices. Python/Pillow/websocket/ffmpeg remain optional externally installed acceptance tools, not product components. A broader formal SPDX/CycloneDX and source-obligation audit remains before image/runtime bundling. No such image or binary release is published here.
+
+
+The desktop-quality evaluation installs Ubuntu/GNOME, PipeWire, GStreamer and normal desktop applications only in an isolated research guest. The original experiments/gnome probe uses external D-Bus APIs and distro GI bindings; no upstream GNOME implementation/assets are copied into the core and no new Go dependency is added. Its use of a private Mutter API is experimental. Full desktop image redistribution still requires component/source/trademark review; no Ubuntu/Fedora image or proprietary browser is bundled or published. The CLI default remains Debian/Xfce.
