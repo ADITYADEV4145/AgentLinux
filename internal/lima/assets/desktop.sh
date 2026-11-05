@@ -17,5 +17,10 @@ xfce4-session &
 session=$!
 i=0
 until xprop -root _NET_SUPPORTING_WM_CHECK 2>/dev/null | grep -q 'window id # 0x'; do i=$((i+1)); [ "$i" -lt 100 ] || exit 1; sleep 0.1; done
+# Do not publish readiness for a bare window manager without desktop/panel.
+for component in xfce4-panel xfdesktop; do
+ i=0
+ until pgrep -u "$(id -u)" -x "$component" >/dev/null; do i=$((i+1)); [ "$i" -lt 100 ] || exit 1; sleep 0.1; done
+done
 xprop -root -f _AGENT_LINUX_GENERATION 8s -set _AGENT_LINUX_GENERATION "$(cat /proc/sys/kernel/random/uuid)"
 wait "$session"

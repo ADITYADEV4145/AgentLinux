@@ -206,6 +206,7 @@ type Execution struct {
 
 // Capabilities describe supported operations; DesktopStatus reports current availability.
 type Capabilities struct {
+	Apps           []string `json:"apps,omitempty"`
 	Displays       int      `json:"displays"`
 	Format         string   `json:"format"`
 	Origin         string   `json:"origin"`
@@ -220,5 +221,18 @@ type Capabilities struct {
 }
 
 func SupportedCapabilities() *Capabilities {
-	return &Capabilities{Displays: 1, Format: "png", Origin: "top-left", Scale: 1, Input: []string{"move", "click", "drag", "scroll", "text", "key"}, PasteModes: []string{"standard", "terminal"}, MaxPNGBytes: MaxPNG, MaxTextBytes: MaxText, MaxOutputBytes: MaxOutput, MaxExecMS: 60000, GuestExec: true}
+	return &Capabilities{Apps: Applications(), Displays: 1, Format: "png", Origin: "top-left", Scale: 1, Input: []string{"move", "click", "drag", "scroll", "text", "key"}, PasteModes: []string{"standard", "terminal"}, MaxPNGBytes: MaxPNG, MaxTextBytes: MaxText, MaxOutputBytes: MaxOutput, MaxExecMS: 60000, GuestExec: true}
+}
+
+// Applications are implemented guest launch targets, not an installed-package assertion.
+func Applications() []string {
+	return []string{"editor", "terminal", "browser", "chromium", "firefox", "files", "settings", "launcher"}
+}
+func ValidApp(name string) bool {
+	for _, app := range Applications() {
+		if name == app {
+			return true
+		}
+	}
+	return false
 }

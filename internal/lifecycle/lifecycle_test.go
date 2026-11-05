@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/ADITYADEV4145/AgentLinux/internal/config"
 	"github.com/ADITYADEV4145/AgentLinux/internal/protocol"
+	"github.com/ADITYADEV4145/AgentLinux/internal/software"
 	"github.com/ADITYADEV4145/AgentLinux/internal/storage"
 	"os"
 	"path/filepath"
@@ -135,5 +136,41 @@ func TestInterruptedCreationRetainsFullDiskBudget(t *testing.T) {
 	}
 	if _, e := c.Up(context.Background(), config.Spec{}, false); e == nil || !checked {
 		t.Fatal("expected preflight refusal")
+	}
+}
+
+type maintenanceFake struct {
+	*fake
+	calls int
+}
+
+func (f *maintenanceFake) Maintain(context.Context, string, []string) (*software.Result, error) {
+	f.calls++
+	return &software.Result{Action: "install"}, nil
+}
+func TestMaintenanceUsesOwnedBackendAndLock(t *testing.T) {
+	c, f, spec := setup(t)
+	backend := &maintenanceFake{fake: f}
+	c.Backend = backend
+	if _, e := c.Up(context.Background(), spec, true); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := c.Maintain(context.Background(), "install", []string{"--unsafe"}); e == nil || backend.calls != 0 {
+		t.Fatal("unvalidated package reached backend")
+	}
+	unlock, e := storage.Lock(c.Root)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e = c.Maintain(context.Background(), "install", []string{"jq"}); e == nil || backend.calls != 0 {
+		t.Fatal("concurrent machine operation allowed")
+	}
+	unlock()
+	if _, e = c.Maintain(context.Background(), "install", []string{"jq"}); e != nil || backend.calls != 1 {
+		t.Fatal("maintenance not routed to owned guest backend", e)
+	}
+	c.Backend = f
+	if _, e = c.Maintain(context.Background(), "refresh", nil); e == nil {
+		t.Fatal("unsupported backend maintenance fabricated")
 	}
 }

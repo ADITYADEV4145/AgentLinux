@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ADITYADEV4145/AgentLinux/internal/config"
+	"github.com/ADITYADEV4145/AgentLinux/internal/software"
 	"go.yaml.in/yaml/v3"
 	"os"
 	"reflect"
@@ -56,15 +57,21 @@ WantedBy=multi-user.target
 	script := `#!/bin/sh
 set -eu
 umask 077
-id agent >/dev/null 2>&1 || useradd --create-home --shell /bin/sh agent
+id agent >/dev/null 2>&1 || useradd --create-home --shell /bin/bash agent
 export DEBIAN_FRONTEND=noninteractive
-if [ ! -f /var/lib/agent-linux/desktop-v2 ]; then
-  apt-get update
-  apt-get install -y --no-install-recommends xvfb xauth x11-utils xfce4-session xfwm4 xfdesktop4 xfce4-panel xfce4-settings thunar xfce4-terminal mousepad chromium chromium-sandbox xdotool scrot xclip dbus-x11 fonts-dejavu fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji
+# New recipe applies only when creating a new machine; never upgrade a sealed existing template.
+if [ ! -f /var/lib/agent-linux/` + software.Recipe + ` ]; then
+  apt-get -o APT::Update::Error-Mode=any update
+  apt-get install -y --no-install-recommends ` + strings.Join(software.DefaultPackages, " ") + `
   install -d /var/lib/agent-linux
   dpkg-query -W > /var/lib/agent-linux/packages.tsv
-  touch /var/lib/agent-linux/desktop-v2
+  printf '%s\n' '` + software.Recipe + `' > /var/lib/agent-linux/recipe
+  touch /var/lib/agent-linux/` + software.Recipe + `
 fi
+printf '%s' '` + base64.StdEncoding.EncodeToString([]byte(softwareScript)) + `' | base64 -d > /usr/local/sbin/agent-linux-software
+chmod 0755 /usr/local/sbin/agent-linux-software
+# Own guest home directories; no host shares or credentials are introduced.
+install -d -m 0700 -o agent -g agent /home/agent/Desktop /home/agent/Documents /home/agent/Downloads /home/agent/Projects
 install -d /usr/local/libexec
 printf '%s' '` + base64.StdEncoding.EncodeToString([]byte(desktopScript)) + `' | base64 -d > /usr/local/libexec/agent-linux-desktop
 chmod 0755 /usr/local/libexec/agent-linux-desktop

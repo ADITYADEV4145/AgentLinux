@@ -55,6 +55,22 @@ func TestRealStdioGuest(t *testing.T) {
 		return v.Data.(map[string]any)["id"].(string)
 	}
 	snap("mcp-before")
+	// New guests advertise the additional launch targets; legacy v2 guests remain usable.
+	if guest, ok := state["guest"].(map[string]any); ok {
+		if caps, ok := guest["capabilities"].(map[string]any); ok {
+			if apps, ok := caps["apps"].([]any); ok {
+				for _, app := range apps {
+					if app == "files" {
+						_, opened := call(t, session, "computer_open", map[string]any{"app": "files"})
+						if !opened.OK {
+							t.Fatal(opened)
+						}
+						snap("mcp-files")
+					}
+				}
+			}
+		}
+	}
 	_, v = call(t, session, "computer_open", map[string]any{"app": "browser"})
 	if !v.OK {
 		t.Fatal(v)

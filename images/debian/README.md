@@ -1,4 +1,4 @@
-# Guest provisioning (Phase 2)
+# Guest provisioning (current recipe: Phase 3.5)
 
 The selected image is Debian 13 genericcloud ARM64 build 20261001-2618. manifest.json records provenance and SHA-512; the same pin is compiled into internal/config/config.go. The checksum was cross-checked against Debian's HTTPS SHA512SUMS and Lima's pinned template. The downloader permits only HTTPS redirects to the documented Debian/ACC mirror hosts, verifies the full digest before use, and has no daily/latest fallback. This verifies integrity against a reviewed pin; **detached Debian image signatures are not automatically verified**. The Phase 0 aspiration to verify distributor signatures remains a release-hardening task; no independent signer-authenticity claim is made.
 
@@ -39,7 +39,47 @@ To update an image, select a dated Debian build, review the checksum/trust sourc
 
 `up` is create-or-resume. A file lock covers lifecycle mutations and status reconciliation. Interrupted pre-creation retains the machine UUID and retries configuration; an existing runtime instance is validated and reused. Missing previously created disks are an error, not a recreation request. Resource/image flags are creation-only and are rejected on an existing machine. `stop` preserves its disk. No deletion/force-stop CLI exists yet; for disposable development cleanup, use the explicit owned LIMA_HOME procedure in scripts/acceptance.py. Do not run global Lima prune/delete.
 
-The code and recipe are repeatable, but resulting disk bytes, SSH keys, boot IDs and timestamps intentionally differ per machine. This is not a bit-reproducible image build. Phase 2 installs Xvfb, Xfce components, Mousepad, Chromium/sandbox, scrot, xdotool, xclip, X11/auth/D-Bus tools and fonts. The exact installed package list is saved in /var/lib/agent-linux/packages.tsv. The desktop install marker avoids repeating apt on every boot; security updates require an explicit image/provisioning revision, not an assumption that restarting updates packages. MCP and live viewers remain unimplemented.
+The code and recipe are repeatable, but resulting disk bytes, SSH keys, boot IDs and timestamps intentionally differ per machine. This is not a bit-reproducible image build. Phase 2 installs Xvfb, Xfce components, Mousepad, Chromium/sandbox, scrot, xdotool, xclip, X11/auth/D-Bus tools and fonts. The exact installed package list is saved in /var/lib/agent-linux/packages.tsv. The desktop install marker avoids repeating apt on every boot; security updates require explicit package/image maintenance, not an assumption that restarting updates packages. MCP is implemented; live viewing remains future work.
 
 
 Phase 2 uses protocol 2.0/service 0.2.0 and does not automatically upgrade a Phase 1 disk. Use a fresh --state-dir; no existing machine is reset or overwritten. The package install is repeatable from the recipe but not byte-reproducible: the Debian security repository can change. Record package versions during acceptance and review image/recipe updates deliberately. The X11/Wayland and guest-exec trust limitations are in docs/guest-protocol.md.
+
+## Phase 3.5: practical desktop, existing machines and updates
+
+New machines retain the dated Debian 13 ARM64 base above and apply recipe `desktop-3.5.0` from `internal/software/catalog.go` through the sealed provisioning template. The recipe adds Firefox ESR, App Finder/menu support, guest home folders, desktop icons/utilities, GVFS/thumbnail/accessibility services and the small development baseline. Existing Thunar/settings/terminal/editor/Chromium packages are reused. Helper 0.3.5 still uses guest protocol 2.0; the new host also accepts legacy 0.2.0 helpers. Old helper capabilities and available apps do not become new merely by replacing the host CLI.
+
+Distinguish three layers:
+
+| Layer/action | Actual behavior |
+| --- | --- |
+| Dated base download | Reviewed Debian genericcloud build/digest; only used to create a new machine |
+| New-machine recipe | Installs from signed Debian 13 repositories at provisioning time; exact package versions recorded, not a frozen apt snapshot |
+| Existing persistent machine | Has its own disk/packages/data; `up` reuses its sealed template and does not rewrite it with today's recipe |
+| `packages refresh` | Explicitly refreshes guest apt indexes; installs no upgrades |
+| `packages install NAME` | Refreshes indexes and installs named supported packages/dependencies into the selected existing guest |
+| `packages upgrade` | Refreshes indexes and applies ordinary apt-get upgrade, preserving modified config files; no dist-upgrade/removal policy or unattended-update claim |
+| `stop` then `up` | Preserves disk, user files, installed packages and browser profile directories; new boot/session/display identities; running processes and unsaved memory are lost |
+| Desktop/helper restart | Files persist; app processes tied to a restarted service may close; clipboard selections can disappear; old frame IDs expire |
+| Reset/ephemeral | No reset command, snapshot or ephemeral mode implemented; no rollback guarantee |
+| Deletion | Not exposed as a product CLI yet; explicit developer removal of an owned VM/state permanently loses its disk/data/keys |
+
+The root-owned `/var/lib/agent-linux/recipe` and package inventory identify provisioning/maintenance state. Kernel and live point release can be read with guest `uname -r` and `/etc/os-release`; do not confuse those with base image build date. `/var/lib/agent-linux/last-maintenance` records successful explicit maintenance. Some kernel/security updates need a stop/up reboot; browser updates need reopening. No restart silently refreshes apt or promises lifelong security updates.
+
+The `agent` desktop/MCP user still has no sudo. The explicit host `packages` CLI uses Lima's existing guest administrator to run a root-owned helper in a bounded guest systemd job. It installs nothing on the Mac and exposes no privileged network listener. See [privilege/failure model](../../docs/development.md). Network/signature errors fail refresh rather than silently reusing stale indexes. Current product mode requires NAT; if connectivity is blocked, maintenance is unavailable until restored. An implemented `--network=off` mode is still future work; do not imply the control channel has been validated offline.
+
+### Preserving and extending a Phase 2/3 machine
+
+Old sealed machines are preserved and continue using their installed helper/recipe; they are not automatically migrated. Their old helper lacks new fixed-app targets and the new maintenance executable. Prefer creating a separate Phase 3.5 namespace and explicitly moving desired documents/projects through user-managed guest networking. Never delete the old state directory to “upgrade.” There is no automatic guest-to-guest disk/application migration.
+
+For a user who intentionally wants to administer an existing guest, Lima's management route remains available. This grants guest root and uses the trusted bootstrap channel; review the selected namespace and do not run a global delete/prune. No new host mount, SSH agent or environment forwarding is needed:
+
+```sh
+# STATE must be the selected existing private machine namespace; LIMA is absolute limactl.
+# No --preserve-env, --sync or host directory share.
+LIMA_HOME="$STATE/lima" "$LIMA" shell --workdir=/ default sudo -n apt-get update
+LIMA_HOME="$STATE/lima" "$LIMA" shell --workdir=/ default sudo -n apt-get install firefox-esr git curl python3-venv
+```
+
+These commands change packages in that guest only; they do **not** install a new AgentLinux helper or new host CLI launch capabilities. Launch added programs from the guest terminal/menu and verify them, or use the fresh-namespace path for the complete new recipe. Package and helper migrations require an explicit reviewed future migration mechanism. No reusable password/key or unattended remote admin listener is introduced.
+
+Distribution remains separate from local development: no VM image is published/bundled here. Both browser choices require their full component notices and applicable corresponding source on image redistribution; GVFS/tumbler/Xfce and new development packages add package-specific licenses. See third_party/README.md and `/usr/share/doc/PACKAGE/copyright` inside the guest before distributing a bundle.

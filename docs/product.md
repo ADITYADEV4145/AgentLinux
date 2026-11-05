@@ -1,6 +1,6 @@
 # Product specification
 
-Phase 3 status (2026-11-05): local desktop/control and official-SDK MCP are implemented. An actual Codex agent operated Chromium through screenshots and guest input. Claude Code/VS Code setup is documented but their agent compatibility is untested. Cloud and live viewing remain future scope; see [MCP setup](mcp.md) and [verification](verification.md).
+Phase 3.5 status (2026-11-05): local desktop/control and official-SDK MCP are implemented. New recipes add a complete Xfce app set, Chromium plus Firefox ESR, a small development baseline and explicit host-operator guest package maintenance. Live viewing remains Phase 4; see desktop.md for the actual current surface. An actual Codex agent operated Chromium through screenshots and guest input. Claude Code/VS Code setup is documented but their agent compatibility is untested. Cloud and live viewing remain future scope; see [MCP setup](mcp.md) and [verification](verification.md).
 
 Phase 0 specification, updated 2026-11-05. Phase 2 adds actual guest desktop capture/input and bounded arbitrary guest commands to local lifecycle. Phase 3 implements MCP; live viewer portions of the full MVP below remain targets; README documents the commands that actually exist.
 

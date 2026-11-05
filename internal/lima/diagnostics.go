@@ -35,11 +35,13 @@ func Find(name string) (string, error) {
 
 var privateKey = regexp.MustCompile(`(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----`)
 var longData = regexp.MustCompile(`[A-Za-z0-9+/=_-]{80,}`)
+var urlCredential = regexp.MustCompile(`(?i)([a-z][a-z0-9+.-]*://)[^\s/]*@`)
 var credential = regexp.MustCompile(`(?i)([a-z_]*(?:token|password|secret|api_key)[a-z_]*\s*[=:]\s*)\S+`)
 
 func Redact(s string) string {
 	s = privateKey.ReplaceAllString(s, "[private key redacted]")
 	s = credential.ReplaceAllString(s, "${1}[redacted]")
+	s = urlCredential.ReplaceAllString(s, "${1}[redacted]@")
 	s = longData.ReplaceAllString(s, "[long data redacted]")
 	if h, _ := os.UserHomeDir(); h != "" {
 		s = strings.ReplaceAll(s, h, "[home]")

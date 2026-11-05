@@ -77,6 +77,12 @@ func (d *Desktop) status(ctx context.Context) *protocol.DesktopStatus {
 		result.Reason = "X11 exists but window manager is unavailable"
 		return result
 	}
+	for _, name := range []string{"xfce4-panel", "xfdesktop"} {
+		if _, e = d.run(ctx, "/usr/bin/pgrep", "-u", "agent", "-x", name); e != nil {
+			result.Reason = "desktop component unavailable: " + name
+			return result
+		}
+	}
 	result.Ready = true
 	result.Generation = gen
 	return result
@@ -292,23 +298,17 @@ func (d *Desktop) Open(ctx context.Context, app string) error {
 	if !s.Ready {
 		return protocol.Fail("DESKTOP_UNAVAILABLE", s.Reason)
 	}
-	var argv []string
-	var class string
-	switch app {
-	case "editor":
-		argv = []string{"/usr/bin/mousepad"}
-		class = "Mousepad"
-	case "terminal":
-		argv = []string{"/usr/bin/xfce4-terminal", "--disable-server"}
-		class = "Xfce4-terminal"
-	case "browser":
-		argv = []string{"/usr/bin/chromium", "--no-first-run", "--disable-dev-shm-usage", "--user-data-dir=/home/agent/.config/agent-linux/chromium", "about:blank"}
-		class = "Chromium"
-	default:
-		return protocol.Fail("INVALID_ARGUMENT", "app must be editor, terminal or browser")
+	argv, class, e := application(app)
+	if e != nil {
+		return e
 	}
-	if cmd := d.apps[app]; cmd != nil && cmd.Process != nil && cmd.Process.Signal(syscall.Signal(0)) == nil {
-		return nil
+	// Focus a visible existing window, including one opened through the menu.
+	existing, e := d.run(ctx, "/usr/bin/xdotool", "search", "--onlyvisible", "--class", class)
+	if e == nil && len(strings.Fields(string(existing.Out))) > 0 {
+		return d.activate(ctx, strings.Fields(string(existing.Out))[0])
+	}
+	if _, e = os.Stat(argv[0]); e != nil {
+		return protocol.Fail("APP_UNAVAILABLE", "guest application is not installed; inspect browsers list or install the documented Debian package")
 	}
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Env = Env()
@@ -326,15 +326,48 @@ func (d *Desktop) Open(ctx context.Context, app string) error {
 	}
 	d.apps[app] = cmd
 	go func() { _ = cmd.Wait() }()
-	check, cancel := context.WithTimeout(ctx, 8*time.Second)
+	check, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	_, e = d.run(check, "/usr/bin/xdotool", "search", "--sync", "--onlyvisible", "--class", class)
+	window, e := d.run(check, "/usr/bin/xdotool", "search", "--sync", "--onlyvisible", "--class", class)
 	if e != nil {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		delete(d.apps, app)
 		return protocol.Fail("APP_UNAVAILABLE", "application window did not become visible")
 	}
+	fields := strings.Fields(string(window.Out))
+	if len(fields) == 0 {
+		return protocol.Fail("APP_UNAVAILABLE", "application returned no visible window")
+	}
+	return d.activate(check, fields[0])
+}
+func (d *Desktop) activate(ctx context.Context, id string) error {
+	if _, e := strconv.ParseUint(id, 10, 64); e != nil {
+		return protocol.Fail("APP_UNAVAILABLE", "invalid guest window identity")
+	}
+	if _, e := d.run(ctx, "/usr/bin/xdotool", "windowactivate", "--sync", id); e != nil {
+		return protocol.Fail("APP_UNAVAILABLE", "guest application window could not be focused")
+	}
 	return nil
+}
+func application(app string) ([]string, string, error) {
+	switch app {
+	case "editor":
+		return []string{"/usr/bin/mousepad"}, "Mousepad", nil
+	case "terminal":
+		return []string{"/usr/bin/xfce4-terminal", "--disable-server"}, "Xfce4-terminal", nil
+	case "browser", "chromium":
+		return []string{"/usr/bin/chromium", "--no-first-run", "--disable-dev-shm-usage", "about:blank"}, "Chromium", nil
+	case "firefox":
+		return []string{"/usr/bin/firefox-esr", "--new-window", "about:blank"}, "firefox-esr", nil
+	case "files":
+		return []string{"/usr/bin/thunar", "/home/agent"}, "Thunar", nil
+	case "settings":
+		return []string{"/usr/bin/xfce4-settings-manager"}, "Xfce4-settings-manager", nil
+	case "launcher":
+		return []string{"/usr/bin/xfce4-appfinder", "--disable-server"}, "Xfce4-appfinder", nil
+	default:
+		return nil, "", protocol.Fail("INVALID_ARGUMENT", "unknown guest application; inspect status capabilities")
+	}
 }
 
 func capturePNG(ctx context.Context) ([]byte, error) {

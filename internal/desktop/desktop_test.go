@@ -96,3 +96,49 @@ func TestUnavailableExpiredAndOversized(t *testing.T) {
 		t.Fatal("stale image returned after display loss")
 	}
 }
+
+func TestDesktopRequiresPanelAndApplicationRouting(t *testing.T) {
+	d, _, _ := fixture(t)
+	original := d.run
+	d.run = func(ctx context.Context, name string, args ...string) (process.Result, error) {
+		if name == "/usr/bin/pgrep" {
+			return process.Result{}, fmt.Errorf("missing panel")
+		}
+		return original(ctx, name, args...)
+	}
+	if s := d.Status(context.Background()); s.Ready || !strings.Contains(s.Reason, "component unavailable") {
+		t.Fatal(s)
+	}
+	for _, name := range protocol.Applications() {
+		argv, class, e := application(name)
+		if e != nil || len(argv) == 0 || class == "" || !strings.HasPrefix(argv[0], "/usr/bin/") {
+			t.Fatal(name, argv, class, e)
+		}
+	}
+	chromium, _, _ := application("browser")
+	if chromium[0] != "/usr/bin/chromium" {
+		t.Fatal(chromium)
+	}
+	firefox, _, _ := application("firefox")
+	if firefox[0] != "/usr/bin/firefox-esr" {
+		t.Fatal(firefox)
+	}
+	if _, _, e := application("chrome"); e == nil {
+		t.Fatal("vendor browser silently substituted")
+	}
+	// Existing guest windows are focused without launching a host application.
+	d, _, commands := fixture(t)
+	original = d.run
+	d.run = func(ctx context.Context, name string, args ...string) (process.Result, error) {
+		if len(args) > 0 && args[0] == "search" {
+			return process.Result{Out: []byte("12345\n")}, nil
+		}
+		return original(ctx, name, args...)
+	}
+	if e := d.Open(context.Background(), "files"); e != nil {
+		t.Fatal(e)
+	}
+	if !strings.Contains(strings.Join(*commands, "\n"), "windowactivate --sync 12345") {
+		t.Fatal("existing window not activated", *commands)
+	}
+}

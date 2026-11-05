@@ -22,7 +22,7 @@ import (
 //go:embed instructions.txt
 var Instructions string
 
-const Version = "0.3.0"
+const Version = "0.3.5"
 
 type Options struct {
 	Debug   io.Writer     // Only operation name, outcome code and duration; never arguments/results.
@@ -231,7 +231,7 @@ func New(computer machine.Machine, opts Options) *mcp.Server {
 		}
 		add("computer_"+kind, "Send "+kind+" only to the Linux guest. Requires an observed, current frameId. Verify the result with a fresh screenshot; dispatch is not proof of application success.", p, required)
 	}
-	add("computer_open", "Open a supported Linux guest app; verify with screenshot.", map[string]*jsonschema.Schema{"app": enum("browser", "editor", "terminal")}, []string{"app"})
+	add("computer_open", "Open a supported Linux guest app; verify with screenshot.", map[string]*jsonschema.Schema{"app": enum(protocol.Applications()...)}, []string{"app"})
 	add("computer_run_command", "Run arbitrary argv ONLY inside Linux, never on the Mac. No implicit shell; explicitly use /bin/sh -c for shell syntax. stdout/stderr are base64 bytes. May modify all agent-owned guest data. Deadline/output limits kill command descendants; this is not an adversarial sandbox.", map[string]*jsonschema.Schema{
 		"argv": {Type: "array", Items: str("guest argv element"), MinItems: intPtr(1), MaxItems: intPtr(128)}, "cwd": str("absolute guest working directory, default /home/agent"), "env": {Type: "object", AdditionalProperties: str("guest environment value")}, "timeoutMs": integer(1, 60000), "outputLimit": integer(1, 262144),
 	}, []string{"argv"})

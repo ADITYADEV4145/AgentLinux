@@ -2,7 +2,7 @@
 
 Give your agent a Linux computer. Run it on your Mac or in the cloud.
 
-**Phase 3 development implementation:** a real Debian ARM64 desktop on Apple virtualization, guest screenshots/input, bounded guest commands, and local lifecycle control. Tested on one Apple silicon Mac. An official-SDK MCP stdio server exposes the local machine to agents. Live terminal/browser viewers and cloud remain future work. Agent Linux is a working name.
+**Phase 3.5 development implementation:** a real Debian ARM64 desktop on Apple virtualization, Chromium and Firefox ESR, launcher/files/settings/editor/terminal controls, guest screenshots/input, bounded guest commands, explicit guest package maintenance, and local lifecycle control. Tested on one Apple silicon Mac. An official-SDK MCP stdio server exposes the local machine to agents. Live terminal/browser viewers and cloud remain future work. Agent Linux is a working name.
 
 Build requirements: Go 1.26.1, Apple silicon Mac, and Lima **2.2.1**. macOS 26.5 has actual acceptance evidence; macOS 14+ is a development target, not a tested compatibility guarantee.
 
@@ -17,11 +17,18 @@ If limactl is on PATH, omit `--lima` from these and subsequent commands. Otherwi
 ```sh
 bin/agent-linux status --json
 bin/agent-linux screenshot --output /tmp/agent-linux.png
+bin/agent-linux open launcher
+bin/agent-linux open files
+bin/agent-linux open settings
 bin/agent-linux open editor
 bin/agent-linux click --button left --clicks 2 300 250
 bin/agent-linux type "hello, café — 日本語 👋"
 bin/agent-linux key CTRL+S
-bin/agent-linux open browser
+bin/agent-linux open browser  # Chromium
+bin/agent-linux open firefox
+bin/agent-linux browsers list --json
+bin/agent-linux packages install jq
+bin/agent-linux packages install --profile web-dev
 bin/agent-linux move 850 600
 bin/agent-linux drag 700 50 720 70
 bin/agent-linux scroll 800 600 0 3
@@ -39,11 +46,15 @@ Default private machine state: `~/.local/share/agent-linux/local`; `--state-dir`
 
 No host mounts, shared host clipboard, SSH-agent/X11 forwarding, host device or host desktop control. Application communication is pinned SSH over loopback to a guest Unix socket. **NAT can reach host/LAN services; it is not network isolation.** X11 apps share the guest desktop, and guest execution is powerful. Image integrity uses a reviewed SHA-512 pin; detached signature validation is not automated.
 
+- [Desktop and Phase 4 readiness](docs/desktop.md)
+- [Browser compatibility](docs/browsers.md) and [development/package maintenance](docs/development.md)
 - [MCP tools, client setup and agent workflow](docs/mcp.md)
 - [Guest protocol, capabilities and limits](docs/guest-protocol.md)
 - [Image provenance and provisioning](images/debian/README.md)
 - [Real hardware evidence and acceptance commands](docs/verification.md)
 - [Architecture](docs/architecture.md), [product target](docs/product.md), [roadmap](docs/roadmap.md), [research](docs/research.md)
 - [Third-party licenses](third_party/README.md)
+
+New Phase 3.5 recipes apply only to new machines; existing disks are preserved, with no implicit guest migration. [Update/persistence details](images/debian/README.md).
 
 Original code is Apache-2.0. The screenshot adapter uses scrot; installed packages retain their own licenses. Generated runtimes, VM keys/state and acceptance screenshots are not committed. No paid cloud resources, billing, hosted service or public deployment has been created.

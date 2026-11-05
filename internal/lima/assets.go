@@ -8,3 +8,6 @@ var desktopScript string
 
 //go:embed assets/desktop.service
 var desktopUnit string
+
+//go:embed assets/software.sh
+var softwareScript string

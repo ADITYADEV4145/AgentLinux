@@ -38,6 +38,7 @@ Usage: agent-linux COMMAND [options]
 Use COMMAND --help for options. Cloud and live viewers are not implemented.
   mcp             Serve the existing local machine over MCP stdio
   mcp-config      Print client configuration; never modifies client settings
+Software: browsers list/install; packages install/refresh/upgrade/profiles.
 Computer commands: screenshot, move, click, drag, scroll, type, key, open, exec.
 All input/commands target Linux; exec never runs its argv on the Mac.
 `
@@ -180,8 +181,8 @@ func Parse(args []string, help io.Writer) (Options, error) {
 			o.Input.Key = argsLeft[0]
 		} else {
 			o.App = argsLeft[0]
-			if o.App != "editor" && o.App != "terminal" && o.App != "browser" {
-				return o, errors.New("open supports editor, terminal or browser")
+			if !protocol.ValidApp(o.App) {
+				return o, errors.New("open supports editor, terminal, browser/chromium, firefox, files, settings or launcher")
 			}
 		}
 	case "exec":
@@ -255,6 +256,9 @@ type Envelope struct {
 func Run(ctx context.Context, args []string, out, errout io.Writer) int {
 	if len(args) > 0 && (args[0] == "mcp" || args[0] == "mcp-config") {
 		return runMCP(ctx, args, out, errout)
+	}
+	if len(args) > 0 && (args[0] == "browsers" || args[0] == "packages") {
+		return runSoftware(ctx, args, out, errout)
 	}
 	o, e := Parse(args, errout)
 	if errors.Is(e, flag.ErrHelp) {

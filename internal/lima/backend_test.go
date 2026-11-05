@@ -49,8 +49,9 @@ func TestResponseValidation(t *testing.T) {
 }
 func TestRedaction(t *testing.T) {
 	text := "-----BEGIN OPENSSH PRIVATE KEY-----\nSECRET\n-----END OPENSSH PRIVATE KEY-----\napi_key=supersecret " + strings.Repeat("a", 200)
+	text += " https://fixture-user:fixture-pass@repo.example.test/debian"
 	redacted := Redact(text)
-	if strings.Contains(redacted, "SECRET") || strings.Contains(redacted, "supersecret") || strings.Contains(redacted, strings.Repeat("a", 100)) {
+	if strings.Contains(redacted, "fixture-user") || strings.Contains(redacted, "fixture-pass") || strings.Contains(redacted, "SECRET") || strings.Contains(redacted, "supersecret") || strings.Contains(redacted, strings.Repeat("a", 100)) {
 		t.Fatal("secret not redacted")
 	}
 }
@@ -117,5 +118,31 @@ func TestRejectRuntimeDirectorySymlinks(t *testing.T) {
 	b := Backend{Root: root}
 	if b.noOverrides() == nil {
 		t.Fatal("symlinked runtime namespace accepted")
+	}
+}
+
+func TestCompleteRecipeAndMaintenance(t *testing.T) {
+	data, e := Template(config.Default(), protocol.ID(), "/private/test/image", "fixture", "fixture", []byte("binary"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	var parsed map[string]any
+	if e = yaml.Unmarshal(data, &parsed); e != nil {
+		t.Fatal(e)
+	}
+	provision := parsed["provision"].([]any)[0].(map[string]any)["script"].(string)
+	for _, required := range []string{"firefox-esr", "thunar", "xfce4-appfinder", "python3-venv", "openssh-client", "desktop-3.5.0", "/usr/local/sbin/agent-linux-software"} {
+		if !strings.Contains(provision, required) {
+			t.Fatal("missing recipe component", required)
+		}
+	}
+	if strings.Contains(provision, "NOPASSWD") || strings.Contains(provision, "usermod -aG sudo") {
+		t.Fatal("guest agent granted administrator privileges")
+	}
+	if !strings.Contains(softwareScript, "APT::Update::Error-Mode=any") || !strings.Contains(softwareScript, "flock -n") {
+		t.Fatal("maintenance does not fail closed or serialize")
+	}
+	if !protocol.CompatibleGuestVersion("0.2.0") || !protocol.CompatibleGuestVersion("0.3.5") || protocol.CompatibleGuestVersion("0.1.0") {
+		t.Fatal("legacy v2 compatibility")
 	}
 }

@@ -2,7 +2,78 @@
 
 Phase 0 inspection: 2026-11-04. Phase 1 verification: 2026-11-05 (America/Chicago).
 
-## Phase 3 results — 2026-11-05 (current)
+## Phase 3.5 results — 2026-11-05 (current)
+
+**Implementation and real Mac acceptance passed.** Inspected the Master Prompt, supplied project instructions, clean Phase 3 git state, Phase 0–3 design/evidence, image manifest/template, desktop adapter, guest protocol, CLI and MCP implementation before extending the existing architecture. Phase 3 was committed/pushed as f78109d and GitHub checks run 41995229635 succeeded; this phase does not infer earlier completion from mocks. No default user machine existed in the inspected default namespace, and no user disk was reset or migrated.
+
+### Before and after
+
+Already present: Debian 13 ARM64/VZ lifecycle and pinned SSH, Xfce/Xvfb, Chromium, Mousepad, terminal, Thunar/settings packages, screenshots/XTEST/Unicode paste, bounded arbitrary guest exec and official MCP. The earlier fixed-app control exposed only editor/terminal/browser and did not establish a complete file/settings/second-browser workflow.
+
+Added: explicit launcher/files/settings/Chromium/Firefox launch/focus, stricter panel/desktop readiness, Firefox ESR, GVFS/tumbler/accessibility and desktop utility packages, Git/SSH/curl/Python development baseline, optional Node/npm/build profiles, browser inventory and explicit guest-admin package refresh/install/upgrade. Guest agent remains non-sudo; no privileged MCP installer or network listener. New recipe desktop-3.5.0/helper 0.3.5, same protocol 2.0; old 0.2.0 accepted without rewriting its sealed disk/template. Legacy acceptance is covered by version/contract tests; a legacy disk was not newly booted in this phase. Go is retained, with [ADR 0008](decisions/0008-stack-and-desktop.md) recording the Go/Rust/platform reasoning.
+
+### Automated verification
+
+`make build test check` passed: host CLI and static ARM64 helper, all race-enabled Go tests, vet and whitespace checks. New tests cover package-name/option/path/URL/shell-fragment rejection, fixed guest-admin argv/runtime limits, architecture-specific browser inventory and no vendor substitution, profile/CLI parsing, missing installed packages, app routing/focus, missing panel readiness, recipe contents/non-sudo policy, legacy service-version acceptance, maintenance routing/unsupported backend and machine-lock exclusion. Existing framing, Unicode/key/PNG, timeouts, restarts, exec cleanup and official MCP protocol tests remain. Shell syntax checks and Python compilation passed. No new Go dependency was introduced.
+
+Mocks/fake runners validate boundaries and failure paths; they are not evidence of virtualization or application usability. The real opt-in official SDK test was extended to open Thunar through MCP on new guests, while retaining legacy capability handling. Optional Node/npm/compiler profiles were not installed/executed in the real guest; full apt upgrade, broad distro/host compatibility, Chrome, Edge and Wayland remain untested here.
+
+### Exact observed environment
+
+Host: Apple silicon ARM64, macOS 26.5 (25F71), 12 logical CPUs, 24 GiB RAM. VM: Lima 2.2.1/VZ, 2 vCPUs/4 GiB RAM/24 GiB logical disk, NAT with host/LAN reachability. Base: Debian genericcloud ARM64 20261001-2618, original reviewed SHA-512. Actual running distribution: **Debian GNU/Linux 13.7 (trixie)**, kernel **6.12.111+deb13-cloud-arm64**, dpkg architecture **arm64**. Display: Xfce 4.20 components on Xvfb/X11, 1280×800, scale 1. Guest helper 0.3.5, protocol 2.0; MCP official Go SDK v1.8.0 client over actual stdio.
+
+| Installed component | Observed package version |
+| --- | --- |
+| Chromium | 156.0.8078.79-1~deb13u1 |
+| Firefox ESR | 153.6.0esr-1~deb13u1 |
+| Xfce session / Thunar | 4.20.2-2 / 4.20.2-1+deb13u1 |
+| Terminal / App Finder / Settings | 1.1.4-1 / 4.20.0-2 / 4.20.1-1 |
+| Mousepad / Xvfb | 0.6.3-1 / 2:21.1.16-1.3+deb13u4 |
+| Git / OpenSSH client | 1:2.47.3-0+deb13u1 / 1:10.0p1-7+deb13u4 |
+| curl / Python / python3-venv | 8.14.1-2+deb13u7 / 3.13.5-1 / 3.13.5-1 |
+| GVFS / tumbler / at-spi2-core | 1.57.2-2+deb13u1 / 4.20.0-1 / 2.56.2-1+deb13u2 |
+| jq (installed during acceptance) | 1.7.1-6+deb13u4 |
+
+These versions describe one observed install, not permanent pins or universal browser certification. Chromium and Firefox are preinstalled; jq was added explicitly for the test. Node.js/npm, build-essential/pkg-config/Python headers are optional profiles. Chrome is optional/untested (current official documentation includes Linux ARM); Edge ARM Linux is unavailable in reviewed sources. Both x86_64 vendor builds and any cloud guest remain untested; see [compatibility table](browsers.md).
+
+### Real end-to-end run and observations
+
+Ran `scripts/full_desktop_acceptance.py` on a **fresh** VM after correcting the issues below; completed successfully with a read-only host-observation fixture. Full private evidence is in ignored artifacts/phase35-release; earlier failure/debug/resumed evidence is retained separately, not counted as a fresh pass. The completed resumed debug run also passed, but its subsecond ready check is explicitly not cold provisioning evidence.
+
+1. Obtained the pinned base, provisioned real packages and waited for guest handshake plus X11/WM/panel/desktop readiness.
+2. Opened Application Finder, Thunar, Xfce Settings and terminal; captured their actual windows. Created a real folder through Thunar's keyboard UI. Typed a shell command in the terminal and verified the guest-created file.
+3. Opened Mousepad, loaded a new test file, typed ASCII plus café/CJK/emoji, copied and pasted inside the guest, saved, and compared **exact UTF-8 bytes** to the expected duplicated text. Visually inspected the resulting PNG. No host clipboard was used.
+4. Opened Chromium and Firefox ESR separately, navigated each to https://example.com and checked the **active target browser's window class and page title**, not just any matching window. Inspected the Firefox PNG and its real page text. No browser account sign-in or unofficial build was used.
+5. Installed jq through the explicit host CLI guest-admin helper and ran it. A deliberately nonexistent package returned PACKAGE_UNAVAILABLE. Temporarily blocked only APT via a test-owned guest proxy config, observed REPOSITORY_UNAVAILABLE instead of stale-index success, then removed that config. The general guest/control network stayed usable.
+6. Used the real official MCP library's CommandTransport to launch the actual MCP binary, check status, capture frames, open Thunar, open/control Chromium with keys/text, verify a changed PNG and guest window title, and verify nonzero guest command/timeout results. This phase did **not** rerun a model-based Codex/Claude integration; the separate successful actual Codex run remains Phase 3 evidence.
+7. Executed real Git and Python/venv/SSL import checks plus an HTTPS curl request; recorded the complete dpkg inventory, OS/kernel, memory and disk data. SSH client installation/version was inventoried, not tested against an external personal account.
+8. Compared Mac pointer coordinates and clipboard **change counter only** around UI/MCP operations: unchanged. Contents were never read; this fixture does not control the Mac. Product source still has no host screen/input/clipboard path.
+9. Stopped and restarted the actual VM. Machine ID stayed stable, boot/session changed, desktop became ready, saved Unicode/terminal files and installed jq persisted, and Firefox reopened. Captured the restarted desktop. No snapshot/reset/rollback was assumed.
+10. Confirmed stopped and removed only the identity-checked test VM/private state/keys. All failure/debug VMs were likewise removed; no acceptance VM is intentionally left running. Screenshots/events/reports are private ignored evidence, not committed user data.
+
+Measured on that clean run: cold CLI up/download/provision-to-ready **108.209 s**; stopped-VM up-to-ready **7.090 s**. Five serial screenshot calls: **0.3742, 0.3576, 0.3562, 0.3557, 0.3599 s**, median **0.3576 s**. The downloaded QCOW2 was **337,510,400 bytes (~322 MiB)**; raw VM disk logical size **25,769,803,776 bytes (24 GiB)**, allocated **3,493,568,512 bytes (~3.25 GiB)** after the test. Guest root filesystem used about 3.10 GB; `/usr` about 2.21 GB. At the recorded observation, MemAvailable was 2,875,788 kB of 4,016,264 kB, including reclaimable cache. These are one-run observations with warm host caches/network-specific provisioning, not minimum-resource/FPS/tail-latency promises.
+
+### Failures, limits and Phase 4 verdict
+
+An initial Thunar first launch exceeded the earlier eight-second visible-window wait even though actual windows appeared later. Guest diagnostics also showed missing thumbnail/accessibility services. Added standard GVFS/tumbler/accessibility packages and a bounded 20-second app-start wait; subsequent fresh file-manager launch/folder creation passed. A test initially clicked a fixed left-side pixel while Mousepad was placed on the right, causing input to hit Thunar. Corrected the test to focus the actual editor and verify its window title/screenshot. Reusing an externally modified open file then triggered a real save-confirmation dialog; debug tests now use new files and reset only their own graphical/helper sessions. None of those failed attempts was reported as successful typing or saved data.
+
+No underlying desktop/MCP blocker remains for Phase 4 at this tested development scope. Phase 4 still must implement Kitty rendering, bounded streaming/refresh/backpressure, terminal input/resize/cleanup and human/agent ownership. Current source is scrot PNG on the defined single X11 display. Screenshot subprocess/PNG work, SSH startup and serialization/terminal bandwidth are likely costs; keep Go and measure before considering a rewrite/native optimization. No complete live viewer was built or advertised.
+
+Known limits: one Mac/configuration; no Wayland/multiple displays; paste destination/IME limitations; no host/LAN egress isolation under NAT; no automatic old-disk migration, snapshots, reset, ephemeral mode or rollback; no independent browser sandbox/security or distribution-license certification. Security maintenance is explicit and documented, not automatically guaranteed by restarting. Package jobs can outlive a disconnected host wait within their guest runtime bound; inspect before retrying. No paid infrastructure, public deployment, billing or package/image publication was created. Phase 3.5 exit criteria are met with these limitations. Commit/push and remote CI are reported after the phase commit; local checks above do not imply remote execution.
+
+Reproduce with a new private evidence directory (requires real Apple silicon Mac, Go 1.26.1, pinned Lima 2.2.1 and the reviewed image/network prerequisites):
+
+```sh
+make build test check
+swiftc scripts/observe_host.swift -o /private/tmp/agent-linux-observe-host
+python3 scripts/full_desktop_acceptance.py --cli bin/agent-linux \
+  --lima /absolute/path/to/limactl --evidence artifacts/my-phase35-run \
+  --observe-host /private/tmp/agent-linux-observe-host
+```
+
+The optional debug-only keep/resume flags apply solely to explicitly selected isolated test namespaces; they are not a product migration/reset feature. Normal acceptance creates and cleans its own VM. See [desktop](desktop.md), [browser installation](browsers.md), [development](development.md), and [image update/persistence](../images/debian/README.md).
+
+## Phase 3 results — 2026-11-05 (historical)
 
 **Implemented official-SDK MCP stdio; real SDK client and real Codex agent acceptance passed on the actual VM.** Phase 3 began with a clean Phase 2 checkout. No Phase 2 guest migration was needed. Official MCP specification/SDK and client documentation were consulted before implementation; sources and exact setup are in [mcp.md](mcp.md). ADR 0007 records the bounded adapter and explicit broker/ownership deferral.
 

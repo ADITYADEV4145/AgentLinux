@@ -32,3 +32,6 @@ MCP integration adds the pinned modules below. Exact upstream LICENSE/NOTICE fil
 | golang.org/x/time | v0.15.0 | BSD-3-Clause |
 
 Some SDK modules in go.sum are upstream/test dependencies, not necessarily linked into our binaries. No SDK HTTP/OAuth listener is enabled by this stdio adapter. A release still needs a generated linked dependency/SBOM review and complete runtime/image notice audit; these development license copies are not distribution clearance.
+
+
+Phase 3.5 adds Debian Firefox ESR (MPL-2.0 core and other components/trademark terms), GVFS/tumbler/accessibility/Xfce utilities (package-specific GPL/LGPL and other notices), Git (GPL-2.0), OpenSSH (component BSD-style/permissive), curl (curl license), Python (PSF plus components), Bash (GPL), Nano (GPL), and their dependencies through apt. Optional Node.js/npm and build profiles add MIT/BSD/GPL and other package-specific terms; they are not bundled by this repository. No new Go module dependency was introduced. Google Chrome and Microsoft Edge are proprietary optional vendor products, not included or rebranded; vendor redistribution/installer terms need separate review. Exact `/usr/share/doc/PACKAGE/copyright`, source offers and aggregate image obligations must be audited before a distributed image/release. None is published by this phase.

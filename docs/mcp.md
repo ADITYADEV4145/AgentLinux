@@ -8,7 +8,7 @@ bin/agent-linux up --local --network=nat --lima /absolute/path/to/limactl
 bin/agent-linux mcp --lima /absolute/path/to/limactl
 ```
 
-The last command is a stdio protocol endpoint, not an interactive terminal. Clients launch it as a subprocess. Use absolute binary/runtime paths. `--state-dir /absolute/private/state` selects an existing Phase 2-compatible machine; omit it for the normal default. Phase 3 does not require a guest upgrade from Phase 2. Closing MCP cancels outstanding operations and closes SSH subprocesses; it **does not stop the VM**. Use `agent-linux stop` when finished.
+The last command is a stdio protocol endpoint, not an interactive terminal. Clients launch it as a subprocess. Use absolute binary/runtime paths. `--state-dir /absolute/private/state` selects an existing Phase 2-compatible machine; omit it for the normal default. Phase 3 does not require a guest upgrade from Phase 2. Phase 3.5 new launch targets require helper 0.3.5; the host also accepts legacy 0.2.0 and does not silently upgrade it. Inspect live capabilities; old guests may reject newer app names. Closing MCP cancels outstanding operations and closes SSH subprocesses; it **does not stop the VM**. Use `agent-linux stop` when finished.
 
 ## Tool contract
 
@@ -24,7 +24,7 @@ Every result includes `{ok, code, message?, data?}` as `structuredContent`, mirr
 | `computer_scroll` | frameId, x, y, dx, dy | Wheel steps, -100..100; positive right/down |
 | `computer_type` | frameId, text; optional pasteMode | UTF-8 through guest clipboard; standard or terminal paste |
 | `computer_key` | frameId, key | ENTER, TAB, arrows, F1..F12, etc.; CTRL/ALT/SHIFT/SUPER combinations |
-| `computer_open` | app: browser/editor/terminal | Fixed guest app launch; screenshot still needed to verify |
+| `computer_open` | app: browser/chromium/firefox/editor/terminal/files/settings/launcher | Fixed guest app launch/focus; screenshot still needed to verify |
 | `computer_run_command` | argv; optional cwd, env, timeoutMs, outputLimit | Guest exit status, separate base64 stdout/stderr, timeout/cancellation/truncation/cleanup indicators |
 
 Images are current guest PNGs, 1280×800, scale 1, origin top-left, one display. Metadata includes `id`, `sessionId`, desktop `generation`, sequence, guest UTC capture time, width/height/scale/format. PNG bytes appear once in image content, never duplicated in structured metadata. The original pixel coordinate system applies even if a client displays a resized preview. An image-capable client/model is required for visual reasoning; a text-only client can inspect metadata/commands but cannot claim to have seen the desktop.

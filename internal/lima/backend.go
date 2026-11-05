@@ -401,7 +401,7 @@ func (b *Backend) exchangeCall(ctx context.Context, s lifecycle.State, o lifecyc
 		return nil, e
 	}
 	g := p.Result
-	if g.GuestVersion != protocol.GuestVersion || !protocol.ValidID(g.SessionID) || g.BootID == "" || g.OS != "linux" || g.Arch != "arm64" {
+	if !protocol.CompatibleGuestVersion(g.GuestVersion) || !protocol.ValidID(g.SessionID) || g.BootID == "" || g.OS != "linux" || g.Arch != "arm64" {
 		return nil, errors.New("guest version/architecture/session not compatible")
 	}
 	q.ID = protocol.ID()

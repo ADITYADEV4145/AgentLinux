@@ -2,6 +2,12 @@
 
 Phase 0 • 2026-11-04 • Decisions below specify intended implementation. The Phase 0 design below is retained as the target architecture; current implementation and hardware evidence are distinguished in the snapshot below. Research facts and links are in [research.md](research.md); experiments and evidence are in [verification.md](verification.md).
 
+## Phase 3.5 implementation snapshot (2026-11-05)
+
+Keep Debian 13 ARM64/Xfce/Xvfb and the existing VZ/SSH/common-machine/MCP architecture. New recipe desktop-3.5.0 adds Firefox ESR, ordinary file-manager/accessibility/thumbnail services and a modest Git/SSH/curl/Python development baseline. Thunar/settings/App Finder and explicit Firefox/Chromium are exposed through fixed app launch/focus, without changing screenshot dimensions or input routing. Readiness includes live panel/desktop presence. Protocol remains 2.0; helper 0.3.5 and legacy 0.2.0 are accepted, with old capabilities/recipe limits explicit.
+
+Guest `agent` remains non-sudo. A separate explicit host CLI maintenance path uses the selected private Lima namespace's existing guest administrator, root-owned helper and bounded guest systemd unit. It is not an MCP tool or privileged network service. It serializes with machine operations, validates package names and fails repository refresh on error. A lost connection can leave a bounded guest job running; no retry/rollback is invented. Existing sealed VM templates/disks are not silently rewritten. See [desktop/Phase 4 handoff](desktop.md), [browsers](browsers.md), [development](development.md), [image persistence](../images/debian/README.md) and [ADR 0008](decisions/0008-stack-and-desktop.md).
+
 ## Phase 3 implementation snapshot (2026-11-05)
 
 The local machine now has an official Go MCP SDK v1.8.0 stdio adapter. Ten documented tools cover status, fresh PNG, six input operations, fixed guest apps and bounded arbitrary guest commands. Strict tool schemas, structured/text result envelopes, image content, recent observed frame IDs, cancellation/deadlines, immediate-busy serialization and existing cross-process locks protect the real common interface. No cloud adapter or automatic lifecycle operation is exposed. The protocol 2.0 guest and Phase 2 image recipe are unchanged.

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/ADITYADEV4145/AgentLinux/internal/config"
 	"github.com/ADITYADEV4145/AgentLinux/internal/protocol"
+	"github.com/ADITYADEV4145/AgentLinux/internal/software"
 	"github.com/ADITYADEV4145/AgentLinux/internal/storage"
 	"os"
 	"time"
@@ -311,4 +312,33 @@ func (c *Controller) GuestCall(ctx context.Context, q protocol.Request) (*protoc
 		return nil, protocol.Fail("UNSUPPORTED_OPERATION", "backend has no guest computer interface")
 	}
 	return backend.Call(ctx, s, q)
+}
+
+// Maintain is explicit host-operator guest administration, never an MCP tool.
+func (c *Controller) Maintain(ctx context.Context, action string, packages []string) (*software.Result, error) {
+	if e := software.Validate(action, packages); e != nil {
+		return nil, protocol.Fail("INVALID_ARGUMENT", e.Error())
+	}
+	unlock, e := storage.Lock(c.Root)
+	if e != nil {
+		return nil, e
+	}
+	defer unlock()
+	s, e := c.load()
+	if e != nil {
+		return nil, e
+	}
+	if s.State == "not_created" {
+		return nil, protocol.Fail("NOT_READY", "create and start the VM first")
+	}
+	if e = c.Backend.Validate(ctx); e != nil {
+		return nil, e
+	}
+	b, ok := c.Backend.(interface {
+		Maintain(context.Context, string, []string) (*software.Result, error)
+	})
+	if !ok {
+		return nil, protocol.Fail("UNSUPPORTED_OPERATION", "backend has no explicit guest package maintenance")
+	}
+	return b.Maintain(ctx, action, packages)
 }
