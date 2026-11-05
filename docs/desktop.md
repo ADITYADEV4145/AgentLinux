@@ -25,7 +25,7 @@ bin/agent-linux mcp-config --client codex
 bin/agent-linux stop
 ```
 
-The PNG output path must be new; existing files are not overwritten. The image and MCP client expose the actual graphical computer. Phase 4 adds a view-only Kitty implementation (visual acceptance pending) and a verified live local web fallback; see [viewer.md](viewer.md). `browser` remains an explicit alias for Chromium; `firefox` launches Firefox ESR. Chrome and Edge are never substituted. The panel's Applications menu and Application Finder provide ordinary guest desktop launching; Thunar manages files, xfce4-terminal runs Bash, Mousepad edits files, and Xfce Settings configures the guest. Guest home directories include Desktop/Documents/Downloads/Projects.
+The PNG output path must be new; existing files are not overwritten. The image and MCP client expose the actual graphical computer. Phase 4 adds a view-only Kitty implementation (0.50.0 visually verified on macOS 26.5) and a verified live local web fallback; see [viewer.md](viewer.md). `browser` remains an explicit alias for Chromium; `firefox` launches Firefox ESR. Chrome and Edge are never substituted. The panel's Applications menu and Application Finder provide ordinary guest desktop launching; Thunar manages files, xfce4-terminal runs Bash, Mousepad edits files, and Xfce Settings configures the guest. Guest home directories include Desktop/Documents/Downloads/Projects.
 
 ## Keep the existing distribution and display model
 

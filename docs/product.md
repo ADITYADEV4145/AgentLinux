@@ -1,8 +1,8 @@
 # Product specification
 
-Phase 4 status (2026-11-05): local desktop/control and official-SDK MCP are implemented. New recipes add a complete Xfce app set, Chromium plus Firefox ESR, a small development baseline and explicit host-operator guest package maintenance. Live view-only browser fallback is verified; Kitty rendering is implemented but visible terminal acceptance remains pending an unlocked Mac. See viewer.md for the current surface and limits. An actual Codex agent operated Chromium through screenshots and guest input. Claude Code/VS Code setup is documented but their agent compatibility is untested. Cloud and live viewing remain future scope; see [MCP setup](mcp.md) and [verification](verification.md).
+Phase 4 status (2026-11-05): local desktop/control and official-SDK MCP are implemented. New recipes add a complete Xfce app set, Chromium plus Firefox ESR, a small development baseline and explicit host-operator guest package maintenance. Live view-only Kitty 0.50.0 rendering and the browser fallback are verified on one Mac, including actual MCP-driven guest changes, resize, reconnect and terminal cleanup. See viewer.md for the current surface and limits. An actual Codex agent operated Chromium through screenshots and guest input. Claude Code/VS Code setup is documented but their agent compatibility is untested. Cloud and direct human viewer input remain future scope; see [MCP setup](mcp.md) and [verification](verification.md).
 
-Phase 0 specification, updated 2026-11-05. Phase 2 adds actual guest desktop capture/input and bounded arbitrary guest commands to local lifecycle. Phase 3 implements MCP; live viewer portions of the full MVP below remain targets; README documents the commands that actually exist.
+Phase 0 specification, updated 2026-11-05. Phase 2 adds actual guest desktop capture/input and bounded arbitrary guest commands to local lifecycle. Phase 3 implements MCP and Phase 4 adds live view-only rendering; broader cloud/human-interaction portions of the full MVP below remain targets. README documents the commands that actually exist.
 
 ## User, problem, and positioning
 

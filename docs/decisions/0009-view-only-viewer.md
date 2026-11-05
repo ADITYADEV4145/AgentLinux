@@ -1,6 +1,6 @@
 # ADR 0009: Kitty direct PNG with a view-only loopback fallback
 
-Date: 2026-11-05. Status: implemented; Kitty visual acceptance pending an unlocked/awake test Mac.
+Date: 2026-11-05. Status: accepted and implemented; real Kitty 0.50.0 visual acceptance passed on one Mac.
 
 Keep the existing guest PNG source and common machine interface. Add a Go view-only terminal consumer using official Kitty direct PNG chunking, active capability probing, real pixel/cell sizing, bounded writes and deferred termios/alternate-screen cleanup. Reuse one image ID and suppress unchanged host-to-terminal PNG transfers. Do not read host files through terminal graphics commands or forward terminal input to the guest.
 
@@ -10,4 +10,4 @@ Synchronous capture/render provides backpressure and no old-frame queue. Static-
 
 Direct human control is deferred: a read-only observer can coexist with MCP without mixed input. Persistent ownership/takeover is required before adding human typing/mouse; do not silently treat terminal intercepted shortcuts as guest input. No custom codec, Rust rewrite, broker daemon, cloud endpoint or paid deployment is introduced.
 
-The actual browser fallback and real VM/MCP/restart path were verified. Kitty's protocol/PNG acknowledgement, PTY geometry/cleanup were tested, but the locked/asleep Mac did not permit a trustworthy visible desktop recording. Blank internal graphics captures are not a passed terminal test, and the implementation needs the explicit visual checklist before Phase 4 is declared fully accepted. See [viewer contract](../viewer.md) and [verification](../verification.md).
+The actual browser fallback and real VM/MCP/restart path were verified. The subsequent unlocked-Mac run also visibly confirmed Linux desktop content, MCP-driven Chromium changes, aspect-preserving resize, unavailable/reconnected states and q/Ctrl+C/SIGTERM terminal restoration. Only test-owned Kitty windows were captured. The original locked-display attempt remains historical failed evidence; a capability acknowledgement alone was never accepted as visual proof. Tiny windows now prioritize connection/resize status and exit guidance over the full identity. See [viewer contract](../viewer.md) and [verification](../verification.md).

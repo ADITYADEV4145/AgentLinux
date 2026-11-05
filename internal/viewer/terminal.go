@@ -267,15 +267,7 @@ func RunTerminal(parent context.Context, h *Hub, t Terminal, machineID string) e
 			digest = snapshot.Digest
 			h.Sent(len(snapshot.Frame.PNG))
 		}
-		line := fmt.Sprintf("Agent Linux %s | %s | last capture %s", machineID, status, age)
-		if size.Columns > 1 && len(line) > size.Columns-1 {
-			line = line[:size.Columns-1]
-		}
-		footer := "VIEW ONLY | q / Ctrl+C exits; VM stays running | agent uses MCP"
-		if size.Columns > 1 && len(footer) > size.Columns-1 {
-			footer = footer[:size.Columns-1]
-		}
-		e = t.Write(writeCtx, []byte("\x1b[1;1H\x1b[2K"+line+fmt.Sprintf("\x1b[%d;1H\x1b[2K", size.Rows)+footer))
+		e = t.Write(writeCtx, []byte(statusLines(size, machineID, status, age)))
 		done()
 		if e != nil {
 			return e
@@ -286,4 +278,32 @@ func RunTerminal(parent context.Context, h *Hub, t Terminal, machineID string) e
 		case <-ticker.C:
 		}
 	}
+}
+
+// Keep the actionable state visible when a window cannot fit the full identity.
+func statusLines(size Size, machineID, status, age string) string {
+	if size.Columns <= 0 || size.Rows <= 0 {
+		return ""
+	}
+	line := fmt.Sprintf("Agent Linux %s | %s | last capture %s", machineID, status, age)
+	footer := "VIEW ONLY | q / Ctrl+C exits; VM stays running | agent uses MCP"
+	if len(line) >= size.Columns {
+		line = fmt.Sprintf("%s | %s | capture %s", status, machineID, age)
+	}
+	if size.Columns < 32 {
+		footer = "q exits; VM stays on"
+	}
+	clip := func(s string) string {
+		// Leave the final cell unused to avoid automatic wrapping/scrolling.
+		n := size.Columns - 1
+		if len(s) > n {
+			return s[:n]
+		}
+		return s
+	}
+	out := "\x1b[1;1H\x1b[2K" + clip(line)
+	if size.Rows > 1 {
+		out += fmt.Sprintf("\x1b[%d;1H\x1b[2K", size.Rows) + clip(footer)
+	}
+	return out
 }

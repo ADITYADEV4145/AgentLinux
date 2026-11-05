@@ -2,7 +2,35 @@
 
 Phase 0 inspection: 2026-11-04. Phase 1 verification: 2026-11-05 (America/Chicago).
 
-## Phase 4 results — 2026-11-05 (current; terminal visual gate pending)
+## Phase 4 completion — 2026-11-05 (current)
+
+**Phase 4 passed on the tested Mac/Kitty configuration.** Continued from pushed commit 3191b65 (CI run 42012902307 succeeded). The unlocked Mac permitted actual graphics inspection: scoped native capture and Kitty screenshots visibly showed the Linux Xfce desktop, not just a LIVE label. The failed locked-display attempt below remains historical evidence.
+
+### Real acceptance and correction
+
+Same host/guest stack as the initial Phase 4 report: ARM64 macOS 26.5 (25F71), 12 logical CPUs/24 GiB RAM, Lima 2.2.1/VZ, disposable 2-vCPU/4-GiB Debian 13.7 ARM64 guest (kernel 6.12.111+deb13-cloud-arm64), desktop-3.5.0/helper 0.3.5/protocol 2.0, Xfce/Xvfb 1280×800, Kitty 0.50.0. No personal/default machine or browser profile was changed.
+
+- An actual official Go MCP SDK v1.8.0 client connected to the real stdio server while Kitty view was active. It captured the guest, opened Thunar/Chromium, typed a UTF-8 data page and verified the guest browser title. The terminal visibly showed “MCP controls this Linux guest” plus café/Japanese/emoji. Central image pixels changed substantially; the status line alone could not pass that check. A model-based Codex/Claude run was not repeated here.
+- Real window sizes were 120×40 → 80×30 → 140×24 → 70×44 → 18×4 → 120×40. macOS/Kitty clamped some requested row counts; the harness now records requested and actual geometry instead of requiring an impossible exact request. Manual inspection confirmed preserved guest aspect ratio on wide/tall layouts and no leftover old placement. Tiny-window inspection exposed a clipped status: fixed by prioritizing RESIZE/connection state and q exit guidance over the machine ID. One-cell/one-row output is also bounded to avoid wrap/invalid row addressing.
+- Stopping only the fixture cleared the image and showed NOT_READY. Starting it waited for the real guest handshake; the scoped recording's final frame visibly shows the Linux desktop again. The first reconnect PNG snapshot contained only the LIVE text; it is retained, not presented as graphics proof. The final visible recording frame establishes reconnection. The opt-in harness now waits for actual guest pixels after reconnect/resizing as well as initialization.
+- q, raw Ctrl+C, and SIGTERM each returned exit 0, restored persistent termios flags, accepted ordinary canonical input, and left the same machine ready. Immediate stty strings differed only by Darwin's transient PENDIN bit; after ordinary input they matched exactly. Error-path cleanup is additionally covered by automated output-failure/cancellation tests.
+- Private evidence: ignored artifacts/phase4-resume/acceptance4 contains the successful corrected run, report/metrics, original scoped PNGs and terminal-demo.mp4. The recording contains **34 actual window captures over 47.966 s**, encoded with measured timestamp gaps. It is a sampled visual record, not terminal paint FPS or full-motion video. The separate initial native window screenshot also displayed Linux correctly. No whole-host desktop, pointer or host clipboard was captured/controlled.
+
+The reusable scripts/viewer_terminal_acceptance.py restricts testing to an explicitly selected disposable fixture and isolated Kitty socket. It never creates/deletes the VM and closes only its own windows. Two earlier fixture runs passed the complete workflow (one before, one after the tiny-status correction). Later harness refinements were driven by preserved failures: a status read hit legitimate MACHINE_BUSY, so only that read now has bounded retry; another visibility check cropped away the icons on the mostly black Xfce desktop, so its crop was corrected and checked against retained real/blank images. Those latest harness refinements were not followed by another full hardware run after the Mac relocked. The production viewer acceptance and recorded successful run remain valid. An asleep-display flag had remained true even during successful unlocked capture; neither that flag nor a capability acknowledgement substitutes for visible evidence.
+
+### Measured scope and automated checks
+
+Successful corrected terminal run: **51.720 s**, 22 capture attempts, 15 valid guest frames, 4 changed PNG hashes, 7 capture errors during contention/deliberate unavailability. Attempt-duration median **464.7 ms**, maximum **2002.1 ms**, including failed/busy attempts; these are backend capture/request timings, not screen-to-terminal paint latency. Guest captures totaled **579,165 PNG bytes**; display uploads totaled **325,514 PNG bytes** (including resize retransmission). Actual guest-to-host captures still transfer full PNGs.
+
+Go viewer counters: **70,598,656 bytes (~67.3 MiB) peak RSS**, **1.106060 s user + 0.312363 s system CPU**, about 2.74% of one CPU averaged over the run, including static/resize/reconnect periods. These exclude SSH subprocesses, Lima, guest, Kitty/GPU and recording overhead. No animation benchmark, maximum throughput, end-to-end paint-latency or broad hardware/resource guarantee follows. The earlier live fallback measurements below remain valid.
+
+`make build test check` passed with the status fix: both binaries, all race-enabled Go tests, vet and whitespace. Subsequent `make test check` passed after adding bounded read-only retry to the hardware MCP test. New unit checks cover tiny/narrow/degenerate status output; Python syntax compilation and retained-real/blank image classification checks passed. Automated terminal/backend doubles remain distinct from the actual Mac results above.
+
+### Exit verdict
+
+Real guest rendering, bounded streaming, usable resizing/status, normal/interrupt cleanup, live secure fallback and a truthful end-to-end sampled demo satisfy Phase 4 for Kitty 0.50.0 on this Mac. Direct human viewer input remains optional/deferred; MCP is the control path. Other terminals/multiplexers, broad Mac compatibility, optimized video, ownership leases and cloud remain unclaimed. No paid infrastructure, public deployment or global terminal configuration was created. Cleanup completed after matching the original machine identity: the disposable VM was explicitly stopped/deleted, its private state/keys removed, and the isolated Kitty process/socket exited. Ignored artifacts/phase4-resume/cleanup.json records this. VM readiness before explicit cleanup confirms viewer exit did not stop it. Source/docs only are committed under the repository owner's identity, without AI attribution or private evidence.
+
+## Phase 4 initial results — 2026-11-05 (historical; visual gate was pending)
 
 **Implementation exists and the real live web fallback passed. Phase 4 is not yet fully accepted: visible Kitty rendering and a truthful terminal video still need an unlocked, awake Mac.** Began from clean pushed Phase 3.5 commit 9d5bb7b; checks run 42000580834 succeeded. Inspected the common machine/capture/locking paths and official Kitty graphics/install/remote-control documentation before choosing direct PNG and a live loopback fallback.
 

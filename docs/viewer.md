@@ -2,7 +2,7 @@
 
 `agent-linux view` consumes the **actual Linux guest's** scrot PNG capture through the common machine interface. It never captures or controls the Mac desktop. The first terminal target is **Kitty 0.50.0**, using direct Kitty graphics-protocol PNG chunks. Other terminals, redirected output, tmux/screen, failed capability queries and missing terminal pixel dimensions fall back to an authenticated live loopback web viewer.
 
-**Verification status (Chrome 156.0.8078.80 fallback; Kitty 0.50.0 PTY/protocol only):** real guest streaming, MCP concurrency, live browser fallback and reconnect/pause behavior passed on macOS 26.5. Kitty 0.50.0 capability/PNG acknowledgement, actual PTY resizing and cleanup were exercised. **Visible Kitty graphics and the terminal video demo remain pending:** the available Mac was locked with its display asleep, and graphics were absent from internal captures. That is not counted as a passed visual test or a proven terminal compatibility claim. An unlocked, awake Mac is required for the remaining checklist below; if graphics remain blank then, the terminal renderer still needs investigation.
+**Verified configuration:** Kitty **0.50.0** and Chrome **156.0.8078.80** fallback on Apple silicon macOS **26.5 (25F71)** with the actual Lima 2.2.1/VZ Debian/Xfce guest. Real screenshots of the Kitty test window show Linux, MCP-driven Chromium changes, aspect-preserving wide/tall resize, tiny-window guidance, unavailable state and reconnection. q, raw Ctrl+C and SIGTERM restore terminal input and leave the VM ready. A private sampled test-window video is recorded. This establishes one tested configuration, not support for every terminal/Mac or a full-motion performance claim. Earlier locked-display blank captures remain documented as unsuccessful historical evidence.
 
 ## Start, view and exit
 
@@ -43,7 +43,7 @@ A fresh 256-bit capability authorizes image/metrics requests. It is printed only
 
 This is a trusted local-user/process boundary, not protection against malware/root/browser extensions on the Mac. Anyone deliberately given the private URL receives read access to the selected guest screen. The web viewer exposes no command/input/lifecycle endpoint. Future hosted viewing requires separate HTTPS, user/session authorization and infrastructure isolation; this loopback listener is not a cloud implementation.
 
-## Tests and remaining acceptance
+## Tests and hardware acceptance
 
 `make build test check` includes capability/layout/chunking/exit-key tests, invalid PNG/size checks, bounded capture/cache/concurrency, disconnect/reconnect, terminal cleanup on cancellation/output error, CLI/help validation, web authorization/Host/Origin/cache behavior and bounded lock waits. These use machine/terminal doubles and handler-level HTTP fixtures, not a simulated VM presented as hardware evidence.
 
@@ -58,15 +58,24 @@ python3 scripts/viewer_web_acceptance.py --cli bin/agent-linux \
 
 The script restricts restart to agentlinux-viewer-acceptance-* namespaces, uses a temporary Chrome profile, tests a real official MCP client changing the guest, records real page PNGs, rejects unauthorized requests, checks pause and reconnect, and cleans its own browser profile. It does not delete a VM it did not create. Its CDP listener is test-only loopback, never part of the product. Remote research/browser tools cannot access this loopback URL; this test uses local Chrome.
 
-Remaining **unlocked-Mac terminal checklist**, still pending:
+The complete terminal hardware checklist passed on the configuration above. Reproduce against a dedicated disposable VM (`TEST_STATE` must resolve directly under `/private/tmp` with an `agentlinux-viewer-acceptance-*` name). Start an isolated Kitty instance with a private socket; no personal terminal or global settings are altered:
 
-1. Start the guest and open Kitty 0.50.0 (official binary, not a multiplexer). Run view in that terminal.
-2. Visually confirm the Linux panel/windows are present in the terminal, not merely a LIVE status. Capture a recording scoped to that test window with appropriate local permissions.
-3. Use a real MCP client to open/type in a guest application; observe those exact changes in Kitty.
-4. Resize wide/tall/small; confirm aspect ratio, status placement and no clipping/ghost images. Actual 120×40 → 80×30 PTY geometry was tested; its visible image fit was not.
-5. Exit with q and Ctrl+C; run normal shell input, compare terminal settings, then repeat with SIGTERM and a failure path. Real q/SIGTERM persistent termios and canonical input checks passed; Darwin's transient PENDIN bit clears on ordinary input and is separately recorded.
-6. Confirm VM remains running/ready, stop it explicitly, and record the tested host/guest/Kitty versions and active CPU/RSS/latency/image-update counts.
+```sh
+/absolute/path/to/kitty --config NONE --listen-on "unix:$PRIVATE_SOCKET" \
+  -o allow_remote_control=socket-only -o shell_integration=disabled \
+  -o confirm_os_window_close=0 python3 -c 'import time; time.sleep(3600)'
+# In another terminal, with the disposable VM already ready:
+python3 scripts/viewer_terminal_acceptance.py --cli bin/agent-linux \
+  --lima /absolute/path/to/limactl --state-dir "$TEST_STATE" \
+  --kitten /absolute/path/to/kitten --socket "$PRIVATE_SOCKET" \
+  --evidence artifacts/new-terminal-test --restart \
+  --ffmpeg /absolute/path/to/ffmpeg
+```
 
-See [verification](verification.md) for measured observations and the exact blocked test. Optional `scripts/viewer_terminal_probe.py` runs only inside an isolated test Kitty window and records TTY state; it does not certify visual output by itself.
+Use a private parent directory for the socket. Test-only dependencies: Pillow, Go, Kitty 0.50.0; ffmpeg is optional and only encodes the scoped recording. The harness creates only its own windows on that socket, runs the official SDK against the real MCP process/guest, requires visible guest pixels and a changed central image region (status text alone cannot pass), resizes, checks tiny-window guidance, optionally stops/restarts only the selected fixture, then checks q/Ctrl+C/SIGTERM restoration and VM identity/readiness. It does not create/delete the VM or terminate an unrelated Kitty instance. Close the isolated seed window and explicitly stop/delete your fixture afterward.
+
+The OS can clamp requested cell sizes; the report records requested and actual geometry. Observed sizes were 120×40, 80×30, 140×24, 70×44 and 18×4. Wide/tall captures preserve the original 1280:800 aspect ratio; tiny windows show RESIZE and q exit guidance rather than a clipped identity. Darwin's transient PENDIN bit differs immediately after raw→canonical restoration; persistent termios flags restore, normal canonical input works, and exact stty strings match after that input. The report records all three observations separately.
+
+The recording samples only the test window with a 500 ms pause between captures (actual rate is lower when capture work is slow), retains actual sample timestamps and encodes variable-duration frames. This is evidence of visible changes, not measured terminal paint FPS or full-motion recording. Initial internal GPU snapshots occasionally contained only text; the test explicitly waits for actual guest pixels. On the successful unlocked run, an OS display-asleep flag still reported true, so that flag alone is not a reliable blocker or graphics-health check. See [verification](verification.md) for timings/resource counters and retained failure history.
 
 Official sources consulted before implementation: [Kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/), [Kitty binary installation](https://sw.kovidgoyal.net/kitty/binary/), [Kitty remote control](https://sw.kovidgoyal.net/kitty/remote-control/), [official Kitty 0.50.0 release](https://github.com/kovidgoyal/kitty/releases/tag/v0.50.0). Official Go x/term v0.40.0 source is pinned in go.mod and its BSD license retained in third_party; x/sys remains v0.41.0.

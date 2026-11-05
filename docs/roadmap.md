@@ -24,19 +24,19 @@ Not claimed: Wayland/multiple displays, broad application paste parity, a strong
 
 Implemented official Go SDK v1.8.0 stdio, ten real local tools, strict schemas, structured/image/error outputs, observed-frame input, deadlines/cancellation and immediate-busy serialization. Added agent instructions and configuration printing for Codex, Claude Code and VS Code without changing global settings. Official SDK protocol tests, multiple supported protocol revisions, real stdio/VM acceptance and actual Codex screenshot → input → verify acceptance passed. Claude Code and VS Code remain explicitly untested as agent integrations. See verification.md and ADR 0007.
 
-The private broker and persistent ownership/takeover lease are deferred to Phase 4: existing file locks plus per-server serialization satisfy this slice. No nonfunctional cloud endpoint is advertised.
+The private broker and persistent ownership/takeover lease remain deferred beyond the view-only Phase 4: existing file locks plus per-server serialization satisfy this slice. No nonfunctional cloud endpoint is advertised.
 
 ## Phase 3.5 — Complete desktop, apps and maintenance (complete)
 
 Extend the working Debian/Xfce stack: launcher/files/settings targets, focused existing windows, two real distro browsers, a small development baseline, explicit guest package installation/updates, persistence documentation and a Go/Rust decision. No language rewrite, host sharing, privileged MCP installer, cloud backend or live terminal viewer. A clean-image real Mac run passed launcher/file management/settings/terminal, exact Unicode guest clipboard, both browsers, real MCP, package/network failure and persistence checks. Exact implementation and real acceptance verdict is in verification.md; tested/untested browser architectures are in browsers.md.
 
-Phase 4 inputs remain actual guest scrot PNGs at 1280×800 scale 1 and the existing X11/MCP control contract. Live rendering, terminal input/resize/cleanup, measured throughput and human/agent takeover are still Phase 4 work. Keep Go for the first viewer unless profiling identifies a concrete reason for a narrow native/Rust component.
+Phase 4 inputs remain actual guest scrot PNGs at 1280×800 scale 1 and the existing X11/MCP control contract. Phase 4 below adds rendering, resize/cleanup and measured observations; direct human input/takeover remains deferred. Keep Go for the first viewer unless profiling identifies a concrete reason for a narrow native/Rust component.
 
-## Phase 4 — Terminal viewer (implementation present; visual acceptance pending)
+## Phase 4 — Terminal viewer (complete on the tested Mac/Kitty configuration)
 
-Implemented Kitty direct PNG rendering, active query/real pixel sizing, raw terminal cleanup, bounded capture/backpressure/unchanged-frame suppression, and secure live loopback fallback. View-only human observer; agents control through MCP. The fallback and actual VM/MCP changes/restart/pause/auth checks passed. Actual Kitty 0.50.0 PTY query/resize/q/SIGTERM cleanup passed, but **visible graphics and terminal recording are not verified** because the Mac is locked/asleep. Complete the explicit unlocked-Mac checklist in viewer.md before declaring Phase 4 fully accepted.
+Implemented Kitty direct PNG rendering, active query/real pixel sizing, raw terminal cleanup, bounded capture/backpressure/unchanged-frame suppression, and secure live loopback fallback. View-only human observer; agents control through MCP. The fallback and actual VM/MCP changes/restart/pause/auth checks passed. Actual Kitty 0.50.0 visible Linux/MCP changes, wide/tall/tiny resizing, VM stop/restart reconnect, q/Ctrl+C/SIGTERM cleanup and unchanged VM lifecycle passed on macOS 26.5. A private sampled test-window recording and reusable opt-in harness preserve that evidence; see viewer.md and verification.md.
 
-Remaining after that gate: optional human input with ownership/takeover, measured optimizations, broad terminal/host support matrix, and distributor signature/installer/SBOM hardening. No fixed-FPS or production-ready claim. No release publication without authorization.
+Future work: optional human input with ownership/takeover, measured optimizations, broad terminal/host support matrix, and distributor signature/installer/SBOM hardening. No fixed-FPS or production-ready claim. No release publication without authorization.
 
 ## Phase 5 — Managed cloud pilot (not started)
 
@@ -44,6 +44,6 @@ No-cost provider/license/contract review first. Evaluate one fixed region/provid
 
 ## Outstanding risks
 
-NAT reaches host/LAN; offline/egress-restricted modes are not validated. Lima bootstrap management SSH is trusted and weaker than application pinning. Provisioning data retains guest host-key material in private state. Detached image signatures and broad host compatibility are unverified. MCP and desktop/control are implemented; no live viewer exists yet. Stronger hostile-guest security, distribution compliance and performance claims require further evidence.
+NAT reaches host/LAN; offline/egress-restricted modes are not validated. Lima bootstrap management SSH is trusted and weaker than application pinning. Provisioning data retains guest host-key material in private state. Detached image signatures and broad host compatibility are unverified. MCP, desktop/control and a live view-only viewer are implemented. Stronger hostile-guest security, distribution compliance and performance claims require further evidence.
 
-Next action: on an unlocked/awake Mac, verify and record Kitty graphics under MCP actions and resizing, then assess human input ownership before adding interaction. End every phase with actual outcome, key files, commands, automated/hardware/skipped verification, limits, git status/commit, exit verdict and exact next action.
+Next action: choose the next scope explicitly; optional human input needs an ownership design, and any cloud pilot begins with provider/license review before infrastructure allocation. End every phase with actual outcome, key files, commands, automated/hardware/skipped verification, limits, git status/commit, exit verdict and exact next action.

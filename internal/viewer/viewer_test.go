@@ -256,3 +256,18 @@ func TestTerminalDisconnectRecoveryResizeCleanup(t *testing.T) {
 		t.Fatal("write failure did not restore terminal")
 	}
 }
+
+func TestNarrowStatusRemainsActionable(t *testing.T) {
+	line := statusLines(Size{Columns: 18, Rows: 5}, identity, "RESIZE: terminal too small", "0.1s")
+	if !strings.Contains(line, "RESIZE") || !strings.Contains(line, "q exits") {
+		t.Fatal("tiny terminal hid resize or exit guidance", line)
+	}
+	line = statusLines(Size{Columns: 30, Rows: 8}, identity, "NOT_READY", "--")
+	if !strings.Contains(line, "NOT_READY") {
+		t.Fatal("narrow terminal hid disconnected state", line)
+	}
+	line = statusLines(Size{Columns: 1, Rows: 1}, identity, "LIVE", "0s")
+	if line != "\x1b[1;1H\x1b[2K" || statusLines(Size{}, identity, "LIVE", "0s") != "" {
+		t.Fatal("degenerate terminal could wrap or address an invalid row", line)
+	}
+}

@@ -36,6 +36,12 @@ func TestRealStdioGuest(t *testing.T) {
 	}
 	defer session.Close()
 	_, v := call(t, session, "computer_status", nil)
+	// A viewer may hold the cross-process lock during a capture. Status is a
+	// read: retry only explicit busy responses, never an uncertain mutation.
+	for attempt := 0; !v.OK && v.Code == "MACHINE_BUSY" && attempt < 20; attempt++ {
+		time.Sleep(100 * time.Millisecond)
+		_, v = call(t, session, "computer_status", nil)
+	}
 	if !v.OK {
 		t.Fatal(v)
 	}
