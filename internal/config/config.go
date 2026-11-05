@@ -27,7 +27,7 @@ type Spec struct {
 }
 
 func Default() Spec {
-	return Spec{CPUs: 2, MemoryGiB: 2, DiskGiB: 16, Image: ImageURL, Digest: ImageSHA512}
+	return Spec{CPUs: 2, MemoryGiB: 4, DiskGiB: 24, Image: ImageURL, Digest: ImageSHA512}
 }
 func (s Spec) Validate() error {
 	if s.CPUs < 1 || s.CPUs > 16 {

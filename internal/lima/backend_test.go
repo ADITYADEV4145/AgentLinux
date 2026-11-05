@@ -37,7 +37,7 @@ func TestResponseValidation(t *testing.T) {
 	if e := checkResponse(q, p); e != nil {
 		t.Fatal(e)
 	}
-	p.Version = "2.0"
+	p.Version = "99.0"
 	if checkResponse(q, p) == nil {
 		t.Fatal("version mismatch accepted")
 	}

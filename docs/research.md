@@ -158,3 +158,11 @@ Verified: noVNC core MPL-2.0, with other licenses on HTML/CSS/fonts/images/vendo
 ## Research limits
 
 No VM runtime, guest desktop, provider account, terminal graphics session, MCP client integration or image download was exercised. Search/fetch cannot establish runtime behavior, minimum hardware, source authenticity beyond retrieval, service entitlement, or full license compliance. Package and exact-release license audits remain distribution gates. Hosted claims, provider regions/prices/quotas and mutable branch licenses must be reverified at implementation time. No project was copied or benchmarked.
+
+
+## Phase 2 implementation sources (2026-11-05)
+
+- [Debian xdotool manual](https://manpages.debian.org/trixie/xdotool/xdotool.1.en.html): XTEST, key modifiers, button/scroll mapping and motion semantics. Actual repeated-coordinate --sync behavior contradicted expectations; see ADR 0006.
+- [Debian scrot manual](https://manpages.debian.org/trixie/scrot/scrot.1.en.html): explicit PNG/stdout capture options and MIT-feh acknowledgement terms. The adapter uses scrot in the Linux guest.
+- [Kernel cgroup v2 documentation](https://docs.kernel.org/admin-guide/cgroup-v2.html): cgroup.kill descendant cleanup. Go 1.26.1's installed Linux syscall source was inspected for UseCgroupFD/CgroupFD atomic placement. Actual clone3/delegation/setsid-child cleanup was validated in the VM; no claim against deliberately malicious cgroup manipulation.
+- GitHub issues were inspected with authenticated `gh issue list`: no open issues. Phase 1 CI success was inspected through `gh run list`; unauthenticated web retrieval of the private issue endpoint returned 404 and was not treated as proof of an empty tracker.

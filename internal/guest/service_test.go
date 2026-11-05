@@ -47,11 +47,11 @@ func TestSessionAndProbe(t *testing.T) {
 	if p.Error == nil || p.Error.Code != "STALE_SESSION" {
 		t.Fatal("stale service session accepted")
 	}
-	p = call("exec", s.SessionID, protocol.Version)
+	p = call("host_exec", s.SessionID, protocol.Version)
 	if p.Error == nil || p.Error.Code != "UNSUPPORTED_OPERATION" {
-		t.Fatal("arbitrary execution accepted")
+		t.Fatal("unknown/host execution accepted")
 	}
-	p = call("hello", "", "2.0")
+	p = call("hello", "", "99.0")
 	if p.Error == nil || p.Error.Code != "VERSION_MISMATCH" {
 		t.Fatal("incompatible protocol accepted")
 	}

@@ -10,3 +10,6 @@ Original AgentLinux code is Apache-2.0 (root LICENSE). No terminal-mac, vmette, 
 - Debian image packages retain their individual licenses; the image is downloaded at runtime, not committed or redistributed here. A redistribution review and corresponding-source obligations remain necessary before publishing a guest image.
 
 The local build currently produces development binaries only, not a cleared release package. License copies here are notices, not an assertion that a future binary/image bundle has passed a complete license audit.
+
+
+Phase 2's guest package recipe installs Xvfb/Xorg (component X11/MIT-style notices), Xfce (component GPL/LGPL), Mousepad (GPL), Chromium (BSD-style core plus extensive third-party notices), xdotool (BSD-style), xclip (GPLv2), scrot (MIT-feh acknowledgement terms), and Noto/DejaVu fonts (font-specific licenses). The screenshot adapter uses scrot. Review exact Debian `/usr/share/doc/<package>/copyright` and source obligations before redistributing an image. The recipe/runtime installation is not a statement that a bundled image has distribution clearance. No new Go dependency was added for desktop or cgroup control.

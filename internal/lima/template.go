@@ -31,20 +31,23 @@ func Template(s config.Spec, id, image, hostKey, authorized string, binary []byt
 	}
 	unit := fmt.Sprintf(`[Unit]
 Description=Agent Linux guest control
-After=local-fs.target
+After=local-fs.target agent-linux-desktop.service
 [Service]
 User=agent
 Group=agent
 RuntimeDirectory=agent-linux
 RuntimeDirectoryMode=0700
 ExecStart=/usr/local/bin/agent-linux-guest --machine-id=%s
-Restart=on-failure
+Restart=always
 RestartSec=1
 NoNewPrivileges=yes
 ProtectSystem=strict
-ProtectHome=yes
-PrivateTmp=yes
-RestrictAddressFamilies=AF_UNIX
+ProtectHome=no
+ReadWritePaths=/home/agent /tmp /run/agent-linux
+Delegate=yes
+PrivateTmp=no
+Environment=HOME=/home/agent
+Environment=LANG=C.UTF-8
 UMask=0077
 [Install]
 WantedBy=multi-user.target
@@ -54,6 +57,18 @@ WantedBy=multi-user.target
 set -eu
 umask 077
 id agent >/dev/null 2>&1 || useradd --create-home --shell /bin/sh agent
+export DEBIAN_FRONTEND=noninteractive
+if [ ! -f /var/lib/agent-linux/desktop-v2 ]; then
+  apt-get update
+  apt-get install -y --no-install-recommends xvfb xauth x11-utils xfce4-session xfwm4 xfdesktop4 xfce4-panel xfce4-settings thunar xfce4-terminal mousepad chromium chromium-sandbox xdotool scrot xclip dbus-x11 fonts-dejavu fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji
+  install -d /var/lib/agent-linux
+  dpkg-query -W > /var/lib/agent-linux/packages.tsv
+  touch /var/lib/agent-linux/desktop-v2
+fi
+install -d /usr/local/libexec
+printf '%s' '` + base64.StdEncoding.EncodeToString([]byte(desktopScript)) + `' | base64 -d > /usr/local/libexec/agent-linux-desktop
+chmod 0755 /usr/local/libexec/agent-linux-desktop
+printf '%s' '` + base64.StdEncoding.EncodeToString([]byte(desktopUnit)) + `' | base64 -d > /etc/systemd/system/agent-linux-desktop.service
 usermod --password '*' agent
 install -d -m 0700 -o agent -g agent /home/agent/.ssh
 printf '%s' '` + base64.StdEncoding.EncodeToString([]byte(authorized)) + `' | base64 -d > /home/agent/.ssh/authorized_keys
@@ -67,7 +82,8 @@ chmod 0600 /etc/ssh/ssh_host_agentlinux_key
 printf '%s\n' 'HostKey /etc/ssh/ssh_host_agentlinux_key' 'PasswordAuthentication no' 'KbdInteractiveAuthentication no' > /etc/ssh/sshd_config.d/00-agent-linux.conf
 printf '%s' '` + base64.StdEncoding.EncodeToString([]byte(unit)) + `' | base64 -d > /etc/systemd/system/agent-linux.service
 systemctl daemon-reload
-systemctl enable agent-linux.service
+systemctl enable agent-linux-desktop.service agent-linux.service
+systemctl restart agent-linux-desktop.service
 systemctl restart agent-linux.service
 /usr/sbin/sshd -t
 systemctl reload ssh.service

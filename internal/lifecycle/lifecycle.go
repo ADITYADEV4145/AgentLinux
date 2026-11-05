@@ -180,7 +180,7 @@ func (c *Controller) Up(ctx context.Context, spec config.Spec, creationFlags boo
 	}
 	s.State = "ready"
 	s.Observed = "Running"
-	s.Stage = "guest_service_ready"
+	s.Stage = "desktop_ready"
 	s.Guest = g
 	if e = c.save(&s); e != nil {
 		return s, e
@@ -231,7 +231,7 @@ func (c *Controller) Status(ctx context.Context) (State, error) {
 		return c.fail(&s, e)
 	}
 	s.State = "ready"
-	s.Stage = "guest_service_ready"
+	s.Stage = "desktop_ready"
 	s.Guest = g
 	s.LastError = ""
 	return s, c.save(&s)
@@ -285,4 +285,30 @@ func (c *Controller) Stop(ctx context.Context) (State, error) {
 	s.Stage = ""
 	s.LastError = ""
 	return s, c.save(&s)
+}
+
+// GuestCall holds the local machine lock throughout a single real guest request.
+func (c *Controller) GuestCall(ctx context.Context, q protocol.Request) (*protocol.Info, error) {
+	unlock, e := storage.Lock(c.Root)
+	if e != nil {
+		return nil, e
+	}
+	defer unlock()
+	s, e := c.load()
+	if e != nil {
+		return nil, e
+	}
+	if s.State == "not_created" {
+		return nil, protocol.Fail("NOT_READY", "create and start the local machine first")
+	}
+	if e = c.Backend.Validate(ctx); e != nil {
+		return nil, e
+	}
+	backend, ok := c.Backend.(interface {
+		Call(context.Context, State, protocol.Request) (*protocol.Info, error)
+	})
+	if !ok {
+		return nil, protocol.Fail("UNSUPPORTED_OPERATION", "backend has no guest computer interface")
+	}
+	return backend.Call(ctx, s, q)
 }

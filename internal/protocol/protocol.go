@@ -15,17 +15,22 @@ import (
 	"unicode/utf8"
 )
 
-const Version = "1.0"
-const GuestVersion = "0.1.0"
-const MaxFrame = 16 << 10
+const Version = "2.0"
+const GuestVersion = "0.2.0"
+const MaxFrame = 16 << 20
+const MaxRequest = 256 << 10
+const MaxPNG = 8 << 20
 
 type Request struct {
-	Version   string `json:"version"`
-	ID        string `json:"id"`
-	MachineID string `json:"machineId"`
-	SessionID string `json:"sessionId,omitempty"`
-	Method    string `json:"method"`
-	Nonce     string `json:"nonce,omitempty"`
+	Version   string       `json:"version"`
+	ID        string       `json:"id"`
+	MachineID string       `json:"machineId"`
+	SessionID string       `json:"sessionId,omitempty"`
+	Method    string       `json:"method"`
+	Nonce     string       `json:"nonce,omitempty"`
+	Input     *Input       `json:"input,omitempty"`
+	Exec      *ExecRequest `json:"exec,omitempty"`
+	App       string       `json:"app,omitempty"`
 }
 type Failure struct {
 	Code    string `json:"code"`
@@ -36,16 +41,21 @@ func (e *Failure) Error() string      { return e.Code + ": " + e.Message }
 func Fail(code, message string) error { return &Failure{code, message} }
 
 type Info struct {
-	GuestVersion string   `json:"guestVersion"`
-	Protocol     string   `json:"protocol"`
-	MachineID    string   `json:"machineId"`
-	SessionID    string   `json:"sessionId"`
-	BootID       string   `json:"bootId"`
-	OS           string   `json:"os"`
-	Arch         string   `json:"arch"`
-	Uptime       string   `json:"uptime,omitempty"`
-	NonceSHA256  string   `json:"nonceSha256,omitempty"`
-	Operations   []string `json:"operations"`
+	GuestVersion string         `json:"guestVersion"`
+	Protocol     string         `json:"protocol"`
+	MachineID    string         `json:"machineId"`
+	SessionID    string         `json:"sessionId"`
+	BootID       string         `json:"bootId"`
+	OS           string         `json:"os"`
+	Arch         string         `json:"arch"`
+	Uptime       string         `json:"uptime,omitempty"`
+	NonceSHA256  string         `json:"nonceSha256,omitempty"`
+	Operations   []string       `json:"operations"`
+	Capabilities *Capabilities  `json:"capabilities,omitempty"`
+	Desktop      *DesktopStatus `json:"desktop,omitempty"`
+	Frame        *Frame         `json:"frame,omitempty"`
+	Execution    *Execution     `json:"execution,omitempty"`
+	InputResult  *InputResult   `json:"inputResult,omitempty"`
 }
 type Response struct {
 	Version string   `json:"version"`
@@ -71,7 +81,7 @@ func ValidID(s string) bool {
 func Read(r *bufio.Reader, v any) error {
 	line, err := r.ReadSlice('\n')
 	if errors.Is(err, bufio.ErrBufferFull) || len(line) > MaxFrame {
-		return Fail("FRAME_TOO_LARGE", "guest message exceeds 16 KiB; connection closed")
+		return Fail("FRAME_TOO_LARGE", "message exceeds negotiated framing limit; connection closed")
 	}
 	if err != nil {
 		return err
@@ -129,6 +139,8 @@ func unique(d *json.Decoder) error {
 	}
 	return nil
 }
+func RequestReader(r io.Reader) *bufio.Reader { return bufio.NewReaderSize(r, MaxRequest) }
+
 func Reader(r io.Reader) *bufio.Reader { return bufio.NewReaderSize(r, MaxFrame+1) }
 func Write(w io.Writer, v any) error {
 	b, e := json.Marshal(v)
@@ -150,4 +162,16 @@ func Write(w io.Writer, v any) error {
 		b = b[n:]
 	}
 	return nil
+}
+
+// WriteRequest enforces the smaller request budget before any mutation is sent.
+func WriteRequest(w io.Writer, q Request) error {
+	b, e := json.Marshal(q)
+	if e != nil {
+		return e
+	}
+	if len(b)+1 > MaxRequest {
+		return Fail("REQUEST_TOO_LARGE", "request exceeds 256 KiB")
+	}
+	return Write(w, q)
 }

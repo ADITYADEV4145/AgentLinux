@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 )
 
 func Find(name string) (string, error) {
@@ -44,7 +45,7 @@ func Redact(s string) string {
 		s = strings.ReplaceAll(s, h, "[home]")
 	}
 	s = strings.Map(func(r rune) rune {
-		if r == '\n' || r == '\t' || r >= 32 && r != 127 {
+		if r == '\n' || r == '\t' || !unicode.IsControl(r) {
 			return r
 		}
 		return -1

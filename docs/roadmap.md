@@ -14,11 +14,11 @@ Real Mac boot, guest operation, stop/restart, identity/session changes, persiste
 
 Corrections from real evidence: compressed provisioning under a 3 MiB budget; selected-field Lima inventory; explicit loopback SSH fallback. See ADR 0005. Exact final verification/cleanup status is recorded in verification.md.
 
-## Phase 2 — Guest desktop/control slice (not started)
+## Phase 2 — Real desktop/control slice (complete)
 
-Provision Xvfb/Xfce/Chromium under the non-sudo guest account. Add bounded PNG capture, fixed-display XTEST input, guest-only Unicode paste modes, frame/session generations and action errors. Test actual browser typing, coordinates, input cleanup, service/display restarts and the host pointer/clipboard boundary. Keep guest input implementation out of the host executable path. No arbitrary execution tool without a separate trust/timeout/output policy.
+Implemented managed Xfce/Xvfb/Chromium, current PNG capture, recent-frame coordinate input, Unicode guest clipboard paste, fixed-app launch, common local machine interface, and arbitrary guest exec with cgroup timeout/disconnect/output cleanup. Added direct verification CLI commands and a reproducible fresh-VM acceptance script. Real UI, exact saved UTF-8 text, browser, mouse, stale frames, crashes and reboot/persistence passed. Host pointer/clipboard metadata remained unchanged. See verification.md and ADR 0006 for the limitations and corrections discovered on hardware.
 
-Exit: actual screenshot → action → screenshot task passes on the Mac; Unicode/focus limitations and resource measurements documented. Recheck image/package licenses and browser sandbox. Commit tested work and update docs.
+Not claimed: Wayland/multiple displays, broad application paste parity, a strong per-command malicious-code sandbox, implicit Phase 1 upgrades, MCP or live viewing. No paid infrastructure was allocated.
 
 ## Phase 3 — Shared API, MCP and observable lifecycle
 
@@ -34,6 +34,6 @@ No-cost provider/license/contract review first. Evaluate one fixed region/provid
 
 ## Outstanding risks
 
-NAT reaches host/LAN; offline/egress-restricted modes are not validated. Lima bootstrap management SSH is trusted and weaker than application pinning. Provisioning data retains guest host-key material in private state. Detached image signatures and broad host compatibility are unverified. No graphical desktop/MCP/viewer exists yet. Stronger hostile-guest security, distribution compliance and performance claims require further evidence.
+NAT reaches host/LAN; offline/egress-restricted modes are not validated. Lima bootstrap management SSH is trusted and weaker than application pinning. Provisioning data retains guest host-key material in private state. Detached image signatures and broad host compatibility are unverified. No MCP/live viewer exists yet; desktop/control is implemented. Stronger hostile-guest security, distribution compliance and performance claims require further evidence.
 
-Next action after Phase 1: implement and validate the guest desktop/capture/input slice on the established VM/service path. End every phase with actual outcome, key files, commands, automated/hardware/skipped verification, limits, git status/commit, exit verdict and exact next action.
+Next action after Phase 2: implement the MCP/shared-client integration with explicit capabilities and input ownership, while preserving the tested guest contract. End every phase with actual outcome, key files, commands, automated/hardware/skipped verification, limits, git status/commit, exit verdict and exact next action.

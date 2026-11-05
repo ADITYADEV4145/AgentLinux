@@ -1,6 +1,6 @@
 # Product specification
 
-Phase 0 specification, updated 2026-11-05. Phase 1 implements only local lifecycle and minimal guest health/probe. The full desktop MVP and proposed commands below remain targets; README documents the commands that actually exist.
+Phase 0 specification, updated 2026-11-05. Phase 2 adds actual guest desktop capture/input and bounded arbitrary guest commands to local lifecycle. MCP and live viewer portions of the full MVP below remain targets; README documents the commands that actually exist.
 
 ## User, problem, and positioning
 

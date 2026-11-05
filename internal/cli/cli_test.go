@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"strings"
 	"testing"
 )
 
@@ -31,5 +32,22 @@ func TestStructuredParseError(t *testing.T) {
 	var result Envelope
 	if e := json.Unmarshal(out.Bytes(), &result); e != nil || code == 0 || result.OK || result.Error == nil {
 		t.Fatalf("invalid JSON failure: %s %v", out.String(), e)
+	}
+}
+
+func TestComputerArguments(t *testing.T) {
+	valid := [][]string{{"click", "--button=right", "--clicks=2", "50", "60"}, {"drag", "1", "2", "300", "400"}, {"scroll", "50", "60", "-1", "2"}, {"type", "café 日本語 👋"}, {"key", "CTRL+SHIFT+S"}, {"exec", "--cwd=/home/agent", "--env=TEST=value", "--", "/bin/echo", "hello"}, {"screenshot", "--output=/private/tmp/guest.png"}}
+	for _, args := range valid {
+		if _, e := Parse(args, &bytes.Buffer{}); e != nil {
+			t.Errorf("valid args %v: %v", args, e)
+		}
+	}
+	for _, args := range [][]string{{"click", "-1", "20"}, {"key", "CMD+C"}, {"exec", "--", "/bin/echo\x00"}, {"screenshot"}, {"move", "1280", "0"}} {
+		if _, e := Parse(args, &bytes.Buffer{}); e == nil {
+			t.Errorf("invalid args accepted %v", args)
+		}
+	}
+	if out := safeGuestText([]byte("hello\x1b]52;c;attack\a")); strings.ContainsRune(out, '\x1b') || strings.ContainsRune(out, '\a') {
+		t.Fatal("guest output can invoke host clipboard")
 	}
 }

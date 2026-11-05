@@ -94,7 +94,7 @@ func Inspect(path, lima string) Report {
 		}
 	}
 	if len(r.Problems) == 0 {
-		r.Capabilities = []string{"local.vz", "guest.health", "guest.probe", "persistent-disk", "network.nat"}
+		r.Capabilities = []string{"local.vz", "guest.health", "guest.probe", "desktop.screenshot", "desktop.input", "guest.exec", "persistent-disk", "network.nat"}
 	}
 	return r
 }

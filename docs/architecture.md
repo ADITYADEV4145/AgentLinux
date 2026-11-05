@@ -2,6 +2,14 @@
 
 Phase 0 • 2026-11-04 • Decisions below specify intended implementation. The Phase 0 design below is retained as the target architecture; current implementation and hardware evidence are distinguished in the snapshot below. Research facts and links are in [research.md](research.md); experiments and evidence are in [verification.md](verification.md).
 
+## Phase 2 implementation snapshot (2026-11-05)
+
+Implemented and hardware-tested: managed Xfce/Xvfb, Mousepad/Chromium, fresh 1280×800 PNG capture, guest-only XTEST mouse/keys and UTF-8 clipboard paste, a shared local machine interface, and arbitrary non-sudo guest argv execution with per-request cgroup cleanup. CLI computer commands are real; no MCP, continuous viewer or cloud backend is present. Phase 1 now has a successful GitHub CI run, and its private-tmp/home/AF_UNIX-only restrictions were corrected for the desktop.
+
+Protocol 2.0/service 0.2.0 negotiates exact versions, bounds requests to 256 KiB/responses to 16 MiB/PNG to 8 MiB, and advertises capabilities separately from current desktop readiness. Frame IDs bind capture/input to session, generation and a 10-second observation window. The non-sudo helper and separate desktop unit share only guest resources. Exec uses Linux clone3 atomic cgroup placement and kill/empty-scope cleanup; unsupported delegation fails rather than claiming cancellation succeeded. This is lifecycle management, not a malicious-guest containment claim.
+
+Actual evidence includes saved ASCII/CJK/emoji text and visible browser PNGs, detached-child timeout cleanup, disconnect/output limits, desktop/helper crashes, stale frame rejection, VM restart/persistence and unchanged host pointer/clipboard counter. Phase 2 defaults are the earlier desktop experiment values (2 vCPU/4 GiB/24 GiB), not a supported minimum. Sources/revisions and limits are in [verification](verification.md), [protocol](guest-protocol.md) and [ADR 0006](decisions/0006-real-desktop-control.md). Existing Phase 1 disks are preserved; use a fresh namespace rather than an implicit migration.
+
 ## Phase 1 implementation snapshot (2026-11-05)
 
 Implemented: Go CLI (`agent-linux`), locked/atomic local state, Lima 2.2.1 VZ backend, Debian 13 ARM64 image with checksum pin, systemd guest service on a private Unix socket, restricted forced SSH bridge through a loopback host endpoint, strict application host-key pinning, hello/health/probe protocol 1.0, lifecycle reconciliation and bounded sanitized logs. The final build is not a graphical desktop. No broker daemon, MCP SDK/server, viewer, cloud adapter or desktop automation is present yet.

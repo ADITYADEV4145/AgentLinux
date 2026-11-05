@@ -352,6 +352,10 @@ func verifyImage(path, digest string) error {
 
 // Pinning is independent from Lima's relaxed bootstrap SSH policy.
 func (b *Backend) exchange(ctx context.Context, s lifecycle.State, o lifecycle.Observation) (*protocol.Info, error) {
+	return b.exchangeCall(ctx, s, o, nil)
+}
+
+func (b *Backend) exchangeCall(ctx context.Context, s lifecycle.State, o lifecycle.Observation, operation *protocol.Request) (*protocol.Info, error) {
 	if o.Port < 1 || o.Port > 65535 {
 		return nil, errors.New("runtime SSH endpoint not available")
 	}
@@ -380,7 +384,7 @@ func (b *Backend) exchange(ctx context.Context, s lifecycle.State, o lifecycle.O
 	}()
 	reader := protocol.Reader(out)
 	q := protocol.Request{Version: protocol.Version, ID: protocol.ID(), MachineID: s.MachineID, Method: "hello"}
-	if e = protocol.Write(in, q); e != nil {
+	if e = protocol.WriteRequest(in, q); e != nil {
 		return nil, e
 	}
 	var p protocol.Response
@@ -401,7 +405,7 @@ func (b *Backend) exchange(ctx context.Context, s lifecycle.State, o lifecycle.O
 	q.SessionID = g.SessionID
 	q.Method = "probe"
 	q.Nonce = protocol.ID()
-	if e = protocol.Write(in, q); e != nil {
+	if e = protocol.WriteRequest(in, q); e != nil {
 		return nil, e
 	}
 	p = protocol.Response{}
@@ -418,11 +422,41 @@ func (b *Backend) exchange(ctx context.Context, s lifecycle.State, o lifecycle.O
 	if p.Result.NonceSHA256 != h {
 		return nil, errors.New("guest probe response mismatch")
 	}
+	if operation != nil {
+		q = *operation
+		q.Version = protocol.Version
+		q.ID = protocol.ID()
+		q.MachineID = s.MachineID
+		if q.SessionID == "" {
+			q.SessionID = g.SessionID
+		}
+		if e = protocol.WriteRequest(in, q); e != nil {
+			return nil, protocol.Fail("OUTCOME_UNKNOWN", "guest request write failed; do not replay mutations blindly")
+		}
+		p = protocol.Response{}
+		if e = protocol.Read(reader, &p); e != nil {
+			return nil, protocol.Fail("OUTCOME_UNKNOWN", "guest disconnected or deadline elapsed; command cancellation requested, outcome/cleanup unconfirmed")
+		}
+		if e = checkResponse(q, p); e != nil {
+			return nil, e
+		}
+		if p.Result.SessionID != q.SessionID {
+			return nil, protocol.Fail("STALE_SESSION", "guest session changed")
+		}
+		if p.Result.Frame != nil {
+			if p.Result.Frame.SessionID != q.SessionID {
+				return nil, protocol.Fail("STALE_FRAME", "screenshot session mismatch")
+			}
+			if e = p.Result.Frame.Validate(); e != nil {
+				return nil, e
+			}
+		}
+	}
 	return p.Result, nil
 }
 func checkResponse(q protocol.Request, p protocol.Response) error {
 	if p.Version != protocol.Version {
-		return protocol.Fail("VERSION_MISMATCH", "guest protocol mismatch")
+		return protocol.Fail("VERSION_MISMATCH", "guest protocol mismatch; use a fresh --state-dir for Phase 2, existing disks are not implicitly upgraded")
 	}
 	if p.ID != q.ID {
 		return errors.New("guest response request ID mismatch")
@@ -431,7 +465,7 @@ func checkResponse(q protocol.Request, p protocol.Response) error {
 		return errors.New("invalid guest result/error envelope")
 	}
 	if p.Error != nil {
-		return protocol.Fail(p.Error.Code, "guest rejected the request")
+		return protocol.Fail(Redact(p.Error.Code), Redact(p.Error.Message))
 	}
 	if p.Result.MachineID != q.MachineID || p.Result.Protocol != protocol.Version {
 		return errors.New("guest machine/protocol identity mismatch")
@@ -456,7 +490,10 @@ func (b *Backend) Handshake(ctx context.Context, s lifecycle.State) (*protocol.I
 		g, e := b.exchange(attempt, s, o)
 		cancel()
 		if e == nil {
-			return g, nil
+			if g.Desktop != nil && g.Desktop.Ready {
+				return g, nil
+			}
+			e = errors.New("guest service is ready but managed desktop is unavailable")
 		}
 		last = e
 		var p *protocol.Failure
@@ -475,4 +512,16 @@ var _ lifecycle.Backend = (*Backend)(nil)
 
 func allowedImageHost(host string) bool {
 	return host == "cloud.debian.org" || host == "cdimage.debian.org" || host == "ftp.acc.umu.se" || strings.HasSuffix(host, ".ftp.acc.umu.se")
+}
+
+// Call never retries a desktop mutation or command after transmission.
+func (b *Backend) Call(ctx context.Context, s lifecycle.State, q protocol.Request) (*protocol.Info, error) {
+	o, e := b.Observe(ctx)
+	if e != nil {
+		return nil, e
+	}
+	if !o.Exists || o.Status != "Running" {
+		return nil, protocol.Fail("NOT_READY", "local VM is not running")
+	}
+	return b.exchangeCall(ctx, s, o, &q)
 }

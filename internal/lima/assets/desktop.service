@@ -1,0 +1,18 @@
+[Unit]
+Description=Agent Linux managed X11 desktop
+After=local-fs.target
+[Service]
+User=agent
+Group=agent
+Environment=HOME=/home/agent
+Environment=LANG=C.UTF-8
+RuntimeDirectory=agent-linux-desktop
+RuntimeDirectoryMode=0700
+ExecStart=/usr/local/libexec/agent-linux-desktop
+Restart=always
+RestartSec=2
+KillMode=control-group
+TimeoutStopSec=10
+UMask=0077
+[Install]
+WantedBy=multi-user.target

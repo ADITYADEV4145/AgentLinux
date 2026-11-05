@@ -2,31 +2,47 @@
 
 Give your agent a Linux computer. Run it on your Mac or in the cloud.
 
-**Status: Phase 1 development implementation.** Local VM creation, startup, actual guest handshake/probe, status, graceful shutdown and sanitized logs are implemented and tested on one Apple silicon Mac. Desktop control, terminal/browser viewing, MCP and cloud remain unimplemented. Agent Linux is a working name.
+**Phase 2 development implementation:** a real Debian ARM64 desktop on Apple virtualization, guest screenshots/input, bounded guest commands, and local lifecycle control. Tested on one Apple silicon Mac. MCP, live terminal/browser viewers and cloud remain future work. Agent Linux is a working name.
 
-Requirements: Apple silicon, development target macOS 14+, Go 1.26.1 to build, and Lima **2.2.1**. Only macOS 26.5 has real acceptance evidence so far; this is not a broad support or minimum-resource guarantee.
+Build requirements: Go 1.26.1, Apple silicon Mac, and Lima **2.2.1**. macOS 26.5 has actual acceptance evidence; macOS 14+ is a development target, not a tested compatibility guarantee.
 
 ```sh
-make build
-make test check
+make build test check
 bin/agent-linux doctor --lima /absolute/path/to/limactl --json
 bin/agent-linux up --local --network=nat --lima /absolute/path/to/limactl
-bin/agent-linux status --lima /absolute/path/to/limactl --json
-bin/agent-linux logs --backend
-bin/agent-linux stop --lima /absolute/path/to/limactl
 ```
 
-If `limactl` is on PATH, omit `--lima`. Creation-only resource options: `--cpus=2 --memory=2 --disk=16` (GiB for memory/disk). Default private state: `~/.local/share/agent-linux/local`; `--state-dir=/absolute/private/path` selects an isolated machine namespace. `up` resumes it without creation flags after interruption or shutdown. `--help` and per-command `--help` describe limits and deadlines. JSON failures have nonzero exit status.
+If limactl is on PATH, omit `--lima` from these and subsequent commands. Otherwise provide it **before positional arguments** on every command that contacts the VM:
 
-The guest service is read-only and reports **service readiness**, not a graphical desktop. There is no arbitrary command-execution tool. `stop` preserves the disk. Closing a CLI does not imply the VM stopped; use status/stop. No force-stop or deletion CLI is provided yet.
+```sh
+bin/agent-linux status --json
+bin/agent-linux screenshot --output /tmp/agent-linux.png
+bin/agent-linux open editor
+bin/agent-linux click --button left --clicks 2 300 250
+bin/agent-linux type "hello, café — 日本語 👋"
+bin/agent-linux key CTRL+S
+bin/agent-linux open browser
+bin/agent-linux move 850 600
+bin/agent-linux drag 700 50 720 70
+bin/agent-linux scroll 800 600 0 3
+bin/agent-linux exec -- /usr/bin/uname -a
+bin/agent-linux exec --cwd /tmp --env DEMO=value --command-timeout 2s -- /bin/sh -c 'printf "%s\n" "$DEMO"'
+bin/agent-linux logs --backend
+bin/agent-linux stop
+```
 
-No host mounts, shared host clipboard, host credentials, forwarded SSH agent/X11, or device access. Application control uses restricted SSH over a loopback endpoint and a guest-only Unix socket, with unique generated keys and pinned guest host identity. **NAT can reach host/LAN services; it is not network isolation.** The initial image download is checked against a reviewed SHA-512 pin; detached image signatures are not automated.
+`exec` runs argv **inside Linux**, never on the Mac. Granting machine control access allows arbitrary commands as the guest `agent` user and access to guest data. JSON exec results contain separate base64 stdout/stderr plus exit/timeout/output/cleanup status; human output escapes guest terminal controls. A shell is used only when explicitly requested inside the guest. Long-lived GUI demo apps should use `open`; exec cleans up its process scope.
 
-- [Provisioning, image provenance and local prebuilt images](images/debian/README.md)
-- [Guest protocol and limits](docs/guest-protocol.md)
-- [Product specification](docs/product.md)
-- [Architecture](docs/architecture.md) and [Phase 1 corrections](docs/decisions/0005-phase1-evidence.md)
-- [Verification evidence](docs/verification.md), [roadmap](docs/roadmap.md), [research](docs/research.md)
-- [Third-party licenses and redistribution limits](third_party/README.md)
+Screenshots are PNG, 1280×800, scale 1, top-left coordinates. Input uses a fresh frame automatically unless `--frame-id` selects a recent observed frame (10-second lifetime). Input acknowledgements mean dispatched, not task completed. Text uses only the **guest** clipboard; some applications reject paste. One display and X11 only; no Wayland or full-motion performance claim.
 
-Original code is Apache-2.0; third-party components retain their licenses. No runtime/images, secrets, machine state or private recordings are committed. No paid resources, hosted service or public release has been created.
+Default private machine state: `~/.local/share/agent-linux/local`; `--state-dir` selects another absolute private namespace. Initial experiment defaults: 2 vCPUs, 4 GiB RAM, 24 GiB logical disk, with host capacity/headroom checks. These are not measured minimum requirements. `stop` preserves the disk; closing a CLI does not imply stopped. Resource/image flags are creation-only. **For a Phase 1 machine, preserve its disk and use a fresh state directory for Phase 2; automatic protocol/guest migration is not implemented.**
+
+No host mounts, shared host clipboard, SSH-agent/X11 forwarding, host device or host desktop control. Application communication is pinned SSH over loopback to a guest Unix socket. **NAT can reach host/LAN services; it is not network isolation.** X11 apps share the guest desktop, and guest execution is powerful. Image integrity uses a reviewed SHA-512 pin; detached signature validation is not automated.
+
+- [Guest protocol, capabilities and limits](docs/guest-protocol.md)
+- [Image provenance and provisioning](images/debian/README.md)
+- [Real hardware evidence and acceptance commands](docs/verification.md)
+- [Architecture](docs/architecture.md), [product target](docs/product.md), [roadmap](docs/roadmap.md), [research](docs/research.md)
+- [Third-party licenses](third_party/README.md)
+
+Original code is Apache-2.0. The screenshot adapter uses scrot; installed packages retain their own licenses. Generated runtimes, VM keys/state and acceptance screenshots are not committed. No paid cloud resources, billing, hosted service or public deployment has been created.

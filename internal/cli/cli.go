@@ -9,11 +9,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/ADITYADEV4145/AgentLinux/internal/machine"
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/ADITYADEV4145/AgentLinux/internal/config"
 	"github.com/ADITYADEV4145/AgentLinux/internal/host"
@@ -32,7 +35,9 @@ Usage: agent-linux COMMAND [options]
   stop            Request graceful shutdown and confirm runtime stopped
   logs            Show bounded, sanitized lifecycle or backend diagnostics
 
-Use COMMAND --help for options. Cloud, desktop viewing and MCP are not implemented.
+Use COMMAND --help for options. Cloud, live viewers and MCP are not implemented.
+Computer commands: screenshot, move, click, drag, scroll, type, key, open, exec.
+All input/commands target Linux; exec never runs its argv on the Mac.
 `
 
 type Options struct {
@@ -40,6 +45,9 @@ type Options struct {
 	JSON, Local, CreationFlags, BackendLogs bool
 	Timeout                                 time.Duration
 	Spec                                    config.Spec
+	Output, App                             string
+	Input                                   protocol.Input
+	Execution                               protocol.ExecRequest
 }
 
 func DefaultRoot() string {
@@ -57,7 +65,7 @@ func Parse(args []string, help io.Writer) (Options, error) {
 	}
 	o.Command = args[0]
 	switch o.Command {
-	case "doctor", "up", "status", "stop", "logs":
+	case "doctor", "up", "status", "stop", "logs", "screenshot", "move", "click", "drag", "scroll", "type", "key", "open", "exec":
 	default:
 		return o, fmt.Errorf("unknown command %q; use --help", o.Command)
 	}
@@ -78,6 +86,30 @@ func Parse(args []string, help io.Writer) (Options, error) {
 		ex, _ := os.Executable()
 		f.StringVar(&o.Spec.GuestBinary, "guest-binary", filepath.Join(filepath.Dir(ex), "agent-linux-guest"), "creation only: static Linux ARM64 guest helper")
 	}
+	if o.Command == "screenshot" {
+		f.StringVar(&o.Output, "output", "", "new PNG output path; existing files are never overwritten")
+	}
+	if isInput(o.Command) {
+		f.StringVar(&o.Input.FrameID, "frame-id", "", "explicit observed frame ID (default: capture immediately before action)")
+		f.StringVar(&o.Input.Button, "button", "left", "left, middle or right")
+		f.IntVar(&o.Input.Clicks, "clicks", 1, "click count: 1 or 2")
+		f.StringVar(&o.Input.PasteMode, "paste-mode", "standard", "standard Ctrl+V or terminal Ctrl+Shift+V")
+	}
+	commandTimeout := 20 * time.Second
+	if o.Command == "exec" {
+		o.Execution.Env = map[string]string{}
+		f.StringVar(&o.Execution.Cwd, "cwd", "/home/agent", "absolute Linux guest working directory")
+		f.IntVar(&o.Execution.OutputLimit, "output-limit", 64<<10, "bytes per output stream, at most 262144")
+		f.DurationVar(&commandTimeout, "command-timeout", commandTimeout, "guest process deadline, at most 60s")
+		f.Func("env", "guest KEY=value environment override; repeatable", func(v string) error {
+			k, value, ok := strings.Cut(v, "=")
+			if !ok {
+				return errors.New("env requires KEY=value")
+			}
+			o.Execution.Env[k] = value
+			return nil
+		})
+	}
 	if o.Command == "logs" {
 		f.BoolVar(&o.BackendLogs, "backend", false, "show sanitized backend diagnostics instead of lifecycle events")
 	}
@@ -87,8 +119,91 @@ func Parse(args []string, help io.Writer) (Options, error) {
 	if e := f.Parse(args[1:]); e != nil {
 		return o, e
 	}
-	if f.NArg() != 0 {
-		return o, errors.New("unexpected positional arguments; use command --help")
+	argsLeft := f.Args()
+	number := func(index int) (int, error) {
+		if index >= len(argsLeft) {
+			return 0, errors.New("missing numeric argument")
+		}
+		n, e := strconv.Atoi(argsLeft[index])
+		if e != nil {
+			return 0, errors.New("coordinates/deltas must be integers")
+		}
+		return n, nil
+	}
+	var parseErr error
+	switch o.Command {
+	case "move", "click", "drag", "scroll":
+		expected := 2
+		if o.Command == "drag" || o.Command == "scroll" {
+			expected = 4
+		}
+		if len(argsLeft) != expected {
+			return o, fmt.Errorf("%s requires %d numeric arguments", o.Command, expected)
+		}
+		o.Input.Kind = o.Command
+		o.Input.X, parseErr = number(0)
+		if parseErr != nil {
+			return o, parseErr
+		}
+		o.Input.Y, parseErr = number(1)
+		if parseErr != nil {
+			return o, parseErr
+		}
+		if expected == 4 {
+			a, e := number(2)
+			if e != nil {
+				return o, e
+			}
+			b, e := number(3)
+			if e != nil {
+				return o, e
+			}
+			if o.Command == "drag" {
+				o.Input.ToX = a
+				o.Input.ToY = b
+			} else {
+				o.Input.DX = a
+				o.Input.DY = b
+			}
+		}
+	case "type", "key", "open":
+		if len(argsLeft) != 1 {
+			return o, errors.New("command requires exactly one quoted text, key combination or app name")
+		}
+		if o.Command == "type" {
+			o.Input.Kind = "text"
+			o.Input.Text = argsLeft[0]
+		} else if o.Command == "key" {
+			o.Input.Kind = "key"
+			o.Input.Key = argsLeft[0]
+		} else {
+			o.App = argsLeft[0]
+			if o.App != "editor" && o.App != "terminal" && o.App != "browser" {
+				return o, errors.New("open supports editor, terminal or browser")
+			}
+		}
+	case "exec":
+		o.Execution.Argv = argsLeft
+		o.Execution.TimeoutMS = int(commandTimeout / time.Millisecond)
+		if e := o.Execution.Validate(); e != nil {
+			return o, e
+		}
+	default:
+		if len(argsLeft) != 0 {
+			return o, errors.New("unexpected positional arguments; use command --help")
+		}
+	}
+	if isInput(o.Command) {
+		check := o.Input
+		if check.FrameID == "" {
+			check.FrameID = strings.Repeat("0", 32)
+		}
+		if e := check.Validate(); e != nil {
+			return o, e
+		}
+	}
+	if o.Command == "screenshot" && o.Output == "" {
+		return o, errors.New("screenshot requires --output; PNG is never written to protocol stdout")
 	}
 	if o.Root == "" || !filepath.IsAbs(o.Root) || filepath.Clean(o.Root) != o.Root {
 		return o, errors.New("--state-dir must be an absolute clean path")
@@ -240,6 +355,73 @@ func Run(ctx context.Context, args []string, out, errout io.Writer) int {
 	c := lifecycle.Controller{Root: root, Backend: backend, Preflight: func(s config.Spec, newDisk bool) error { return host.Inspect(root, executable).Validate(s, newDisk) }}
 	ctx, cancel := context.WithTimeout(ctx, o.Timeout)
 	defer cancel()
+	local := machine.Local{Controller: &c}
+	switch o.Command {
+	case "screenshot":
+		frame, e := local.Screenshot(ctx)
+		if e != nil {
+			return fail(e, nil)
+		}
+		file, e := os.OpenFile(o.Output, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+		if e != nil {
+			return fail(e, nil)
+		}
+		_, e = file.Write(frame.PNG)
+		if e == nil {
+			e = file.Sync()
+		}
+		closeErr := file.Close()
+		if e != nil {
+			return fail(e, nil)
+		}
+		if closeErr != nil {
+			return fail(closeErr, nil)
+		}
+		frame.PNG = nil
+		return emit(frame)
+	case "move", "click", "drag", "scroll", "type", "key":
+		r, e := local.Input(ctx, o.Input)
+		if e != nil {
+			return fail(e, nil)
+		}
+		return emit(r)
+	case "open":
+		if e := local.Open(ctx, o.App); e != nil {
+			return fail(e, nil)
+		}
+		return emit(map[string]string{"app": o.App, "status": "visible"})
+	case "exec":
+		r, e := local.Exec(ctx, o.Execution)
+		if e != nil {
+			return fail(e, nil)
+		}
+		if o.JSON {
+			emit(r)
+		} else {
+			fmt.Fprint(out, safeGuestText(r.Stdout))
+			fmt.Fprint(errout, safeGuestText(r.Stderr))
+			if r.Error != "" {
+				fmt.Fprintln(errout, "guest exec: "+r.Error)
+			}
+		}
+		if !r.CleanupConfirmed {
+			return 1
+		}
+		if r.TimedOut {
+			return 124
+		}
+		if r.Canceled || r.Truncated {
+			return 1
+		}
+		if r.ExitCode != 0 {
+			if r.ExitCode > 0 && r.ExitCode <= 125 {
+				return r.ExitCode
+			}
+			return 1
+		}
+		return 0
+	}
+
 	var s lifecycle.State
 	switch o.Command {
 	case "up":
@@ -253,4 +435,25 @@ func Run(ctx context.Context, args []string, out, errout io.Writer) int {
 		return fail(e, &s)
 	}
 	return emit(s)
+}
+
+func isInput(command string) bool {
+	switch command {
+	case "move", "click", "drag", "scroll", "type", "key":
+		return true
+	}
+	return false
+}
+
+// Escape guest terminal controls; never let guest output invoke host OSC/clipboard operations.
+func safeGuestText(data []byte) string {
+	var b strings.Builder
+	for _, r := range strings.ToValidUTF8(string(data), "�") {
+		if unicode.IsControl(r) && r != '\n' && r != '\t' {
+			fmt.Fprintf(&b, "\\u%04x", r)
+		} else {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
