@@ -1,6 +1,54 @@
 # Verification evidence
 
-Phase 0 • 2026-11-04 (America/Chicago).
+Phase 0 inspection: 2026-11-04. Phase 1 verification: 2026-11-05 (America/Chicago).
+
+## Phase 1 results — 2026-11-05
+
+**Actual local implementation and actual VM acceptance passed.** This section is current; the Phase 0 inspection below is historical. Desktop/MCP/viewer acceptance is still pending.
+
+Host: Apple silicon arm64, macOS 26.5 build 25F71, 12 logical CPUs, 24 GiB RAM; hardware virtualization query returned 1. Free space was rechecked after cleanup and exceeded the conservative creation budget. Go 1.26.1; workspace-local Lima 2.2.1 from its official ARM64 release archive, checked against release SHA256SUMS. No global runtime install or privileged network helper was added.
+
+Guest: Debian GNU/Linux 13 (trixie), genericcloud ARM64 build 20261001-2618, kernel `6.12.111+deb13-cloud-arm64`. Image SHA-512 matched the compiled pin and Debian's HTTPS manifest; no detached signature verification was performed. Service 0.1.0, protocol 1.0, 2 vCPUs/2 GiB RAM/16 GiB logical disk, plain VZ with NAT and no inherited host mounts. No desktop packages were installed.
+
+### Automated checks actually run
+
+- `make build`: host command and static Linux ARM64 helper built successfully.
+- `make test`: `go test -race ./...` passed. Tests cover CLI parsing/errors; protocol framing, duplicate/unknown/malformed/oversized messages and versions; handshake/session association; fixed probe; arbitrary-operation rejection; disconnect and idle timeout; state transitions, interrupted startup and missing disk; unconfirmed shutdown; file locks/atomic state, symlinks/path traversal; resource budgets; effective config and QCOW2 safety; image mirror policy; provisioning-size regression; log redaction; subprocess-group deadline/output bounds.
+- `make check`: `go vet ./...` and whitespace check passed. These are local checks, not a GitHub Actions run. Linux CI config was added but not executed remotely.
+- Python acceptance script passed on a real Mac and compiled locally. The shell subprocess timeout test exercises a host-side test fixture only; **there is no guest shell-execution API** and no claim that guest arbitrary-command limits were implemented/tested.
+
+### Real Mac observations
+
+1. Downloaded/checksummed the selected Debian QCOW2, created a VZ disk with Lima, booted Linux and completed the actual strict-SSH hello and nonce SHA-256 probe. `ready` was emitted only after both checks. Service reported Linux/arm64, matching machine/session identity and protocol.
+2. Inspected the test guest through trusted bootstrap administration: Debian/kernel as above, systemd service active, desktop/service account `agent` UID/GID 1001 with no supplementary groups. `findmnt` found no virtiofs, 9p or SSHFS mounts. Application channel's SSH key was restricted to the bridge.
+3. Graceful `stop` returned only after runtime reported Stopped. Restart preserved the machine ID, changed Linux boot ID and service-session ID, and completed a fresh handshake/probe. A sentinel created inside the guest persisted across shutdown/restart. Initial sentinel read failed because the bootstrap admin lacked access to the agent-owned file; a privileged test-only read confirmed persistence. This was a test-permission issue, not a missing file.
+4. Replaced the test known_hosts entry temporarily with a different public key: status failed with HOST_KEY_MISMATCH and did not report ready. Restored the correct entry, confirmed ready again, then stopped the VM.
+5. Ran the checked-in `scripts/acceptance.py` against a fresh machine using the final helper and an existing verified image. It passed real up/status/stop/restart checks, stable machine/new boot/session checks, and removed its own test resources. Observed first readiness was **10.71 seconds with cached image** on this one run. This is not a cold-download benchmark or a performance guarantee.
+6. Separately removed both earlier specifically identified stopped development instances and their generated host/control keys, image caches and private state after checking owner marker, machine IDs and runtime Stopped state. No global delete/prune was used. No VM created by this phase remains running. Workspace-local runtime/build caches remain ignored, with no guest credentials in tracked files.
+
+### Failures that improved the implementation
+
+The first network request followed Debian's official HTTPS mirror redirect, which the initial allowlist rejected. The allowlist now includes that documented mirror, while checksum pinning and HTTPS remain mandatory. An uncompressed embedded executable exceeded Lima's observed 4 MiB template input limit and was truncated; validation prevented boot. Compressed multiline provisioning with an explicit 3 MiB cap fixed it. Lima's ordinary JSON inventory hit `bufio.Scanner: token too long` on embedded config; a fixed selected-field format resolved it without returning config/key blobs. See ADR 0005. Failed attempts were not recorded as successful acceptance.
+
+### Constraints and risks
+
+One Mac/runtime/image combination was exercised. macOS 14 is a development target, not a tested minimum; Intel, other host versions and cloud were not tested. NAT host/LAN reachability remains a limitation, and no host/LAN network scan was performed. Vsock/offline networking, distributor signature validation, installed release/notarization, image redistribution compliance, physical-device access, desktop capture/input, Unicode UI behavior, MCP/client compatibility and viewers remain untested/unimplemented. A VM is a risk-reduction boundary, not a malicious-code security guarantee. The guest bootstrap admin and Lima runtime remain trusted, including upstream management SSH behavior. No screen recording/accessibility grants were requested, and no host desktop input API exists in this phase.
+
+### Reproduce safely
+
+```sh
+make build test check
+bin/agent-linux doctor --lima /absolute/path/to/limactl --json
+python3 scripts/acceptance.py --cli ./bin/agent-linux --lima /absolute/path/to/limactl
+```
+
+The acceptance script creates a dedicated temporary root, uses explicit NAT, stops/restarts a real VM, and deletes only its own stopped machine. It does not use a personal default machine. It can reuse an existing copy of the pinned QCOW2 with `--image /absolute/path/image.qcow2`. On unconfirmed shutdown/deletion it preserves the state and reports its location. More extensive protocol failure tests use explicit in-process/backend doubles and do not constitute hardware evidence.
+
+### Phase 1 exit verdict
+
+Local creation/start/actual readiness/shutdown: met. Guest service/protocol: met. Relevant automated checks: passed. Real hardware validation: completed with the limits above. Paid resources, public deployments, package publication and billing: none. Staged review passed across 41 text files: no generated/private paths, binaries, actual private-key blocks, common credential-token patterns, private home paths/email or AI attribution trailers. These checks and content review are not a universal secret-detection guarantee. Phase-end commit follows that review; the final response gives the commit hash and clean/dirty status. Nothing was pushed unless separately reported. Next action: guest desktop/capture/input slice, not cloud or UI polish.
+
+## Historical Phase 0 evidence
 
 ## What was actually done
 

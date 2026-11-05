@@ -1,0 +1,11 @@
+{
+  "distribution": "Debian GNU/Linux 13 (trixie)",
+  "architecture": "arm64",
+  "build": "20261001-2618",
+  "variant": "genericcloud",
+  "url": "https://cloud.debian.org/images/cloud/trixie/20261001-2618/debian-13-genericcloud-arm64-20261001-2618.qcow2",
+  "sha512": "d8470b8c6c38fead046c794b5800a5a7b96672d5bcf543cc230ceb0c4b8ace05ed341a0c8928045422243fde26b2f1f2f58e99244c65709ffda2e3d4b674dd5a",
+  "checksumSource": "https://cloud.debian.org/images/cloud/trixie/20261001-2618/SHA512SUMS",
+  "upstreamCrossCheck": "https://github.com/lima-vm/lima/blob/v2.2.1/templates/_images/debian-13.yaml",
+  "signatureVerification": "not automated; trust is the reviewed pin plus HTTPS sources"
+}

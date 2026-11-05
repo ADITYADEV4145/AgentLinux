@@ -1,6 +1,16 @@
 # Architecture
 
-Phase 0 • 2026-11-04 • Decisions below specify intended implementation. Nothing here is a hardware acceptance result. Research facts and links are in [research.md](research.md); experiments and evidence are in [verification.md](verification.md).
+Phase 0 • 2026-11-04 • Decisions below specify intended implementation. The Phase 0 design below is retained as the target architecture; current implementation and hardware evidence are distinguished in the snapshot below. Research facts and links are in [research.md](research.md); experiments and evidence are in [verification.md](verification.md).
+
+## Phase 1 implementation snapshot (2026-11-05)
+
+Implemented: Go CLI (`agent-linux`), locked/atomic local state, Lima 2.2.1 VZ backend, Debian 13 ARM64 image with checksum pin, systemd guest service on a private Unix socket, restricted forced SSH bridge through a loopback host endpoint, strict application host-key pinning, hello/health/probe protocol 1.0, lifecycle reconciliation and bounded sanitized logs. The final build is not a graphical desktop. No broker daemon, MCP SDK/server, viewer, cloud adapter or desktop automation is present yet.
+
+The shipped service version is 0.1.0. One Mac has actual boot/probe/stop/restart evidence; see verification.md. Phase 1 uses 2 vCPUs/2 GiB/16 GiB logical disk as its default experiment config, not a measured minimum. Original 4 GiB/24 GiB desktop resource proposals below remain unvalidated future desktop targets. The observed runtime does not need a separate QEMU installation for the selected QCOW2 conversion.
+
+The backend uses the permitted loopback SSH fallback, not vsock. Input templates embed a stripped, compressed guest helper and are capped at 3 MiB after Lima was observed truncating input at 4 MiB. Inventory uses selected lifecycle fields, avoiding Lima JSON scanner failure on large embedded config. Original state schemas/API design below are future targets; actual Phase 1 protocol uses exact version 1.0 and 32-hex random machine/session IDs. See [ADR 0005](decisions/0005-phase1-evidence.md) and [guest-protocol.md](guest-protocol.md).
+
+Apache-2.0 is adopted in LICENSE. The only external Go dependency is go.yaml.in/yaml/v3 v3.0.4 (MIT/Apache component licenses retained). MCP is deferred and has no dependency yet. Image integrity uses the reviewed SHA-512/HTTPS sources; detached signature validation remains a release gate. No distribution clearance or broad security guarantee is claimed.
 
 ## Recommended first slice
 

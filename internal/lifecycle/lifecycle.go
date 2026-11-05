@@ -1,0 +1,288 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package lifecycle
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"github.com/ADITYADEV4145/AgentLinux/internal/config"
+	"github.com/ADITYADEV4145/AgentLinux/internal/protocol"
+	"github.com/ADITYADEV4145/AgentLinux/internal/storage"
+	"os"
+	"time"
+)
+
+type State struct {
+	Schema         int            `json:"schema"`
+	MachineID      string         `json:"machineId"`
+	State          string         `json:"state"`
+	Observed       string         `json:"observed"`
+	Stage          string         `json:"stage,omitempty"`
+	Spec           config.Spec    `json:"spec"`
+	BackendVersion string         `json:"backendVersion,omitempty"`
+	Guest          *protocol.Info `json:"guest,omitempty"`
+	LastError      string         `json:"lastError,omitempty"`
+	UpdatedAt      time.Time      `json:"updatedAt"`
+}
+type Observation struct {
+	Exists bool
+	Status string
+	Port   int
+}
+type Backend interface {
+	Observe(context.Context) (Observation, error)
+	Create(context.Context, State) error
+	Validate(context.Context) error
+	Start(context.Context) error
+	Stop(context.Context) error
+	Handshake(context.Context, State) (*protocol.Info, error)
+}
+type Controller struct {
+	Root      string
+	Backend   Backend
+	Preflight func(config.Spec, bool) error
+}
+
+func (c *Controller) load() (State, error) {
+	var s State
+	e := storage.Read(c.Root, "state.json", &s)
+	if os.IsNotExist(e) {
+		return State{Schema: 1, State: "not_created", Observed: "absent"}, nil
+	}
+	if e != nil {
+		return s, e
+	}
+	if s.Schema != 1 || !protocol.ValidID(s.MachineID) {
+		return s, errors.New("invalid stored state schema/identity; do not delete disks, inspect state backup")
+	}
+	switch s.State {
+	case "creating", "starting", "ready", "stopping", "stopped", "error":
+	default:
+		return s, errors.New("invalid stored lifecycle state")
+	}
+	return s, nil
+}
+func (c *Controller) save(s *State) error {
+	s.UpdatedAt = time.Now().UTC()
+	if e := storage.JSON(c.Root, "state.json", s); e != nil {
+		return e
+	}
+	return c.log(s.State, s.Stage, s.LastError)
+}
+func (c *Controller) log(state, stage, code string) error {
+	if e := storage.SafeFile(c.Root, "events.jsonl"); e != nil {
+		return e
+	}
+	path := c.Root + "/events.jsonl"
+	if i, e := os.Stat(path); e == nil && i.Size() > 1<<20 {
+		if e = storage.Write(c.Root, "events.jsonl", nil); e != nil {
+			return e
+		}
+	}
+	f, e := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
+	if e != nil {
+		return e
+	}
+	defer f.Close()
+	return protocol.Write(f, map[string]any{"time": time.Now().UTC(), "state": state, "stage": stage, "code": code})
+}
+func (c *Controller) fail(s *State, err error) (State, error) {
+	if !protocol.ValidID(s.MachineID) {
+		return *s, err
+	}
+	s.State = "error"
+	s.Guest = nil
+	s.LastError = "BACKEND_OPERATION_FAILED"
+	if errors.Is(err, context.Canceled) {
+		s.LastError = "INTERRUPTED"
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		s.LastError = "DEADLINE_EXCEEDED"
+	}
+	saveErr := c.save(s)
+	if saveErr != nil {
+		return *s, errors.Join(err, saveErr)
+	}
+	return *s, err
+}
+func (c *Controller) Up(ctx context.Context, spec config.Spec, creationFlags bool) (State, error) {
+	unlock, e := storage.Lock(c.Root)
+	if e != nil {
+		return State{}, e
+	}
+	defer unlock()
+	s, e := c.load()
+	if e != nil {
+		return s, e
+	}
+	o, e := c.Backend.Observe(ctx)
+	if e != nil {
+		return c.fail(&s, e)
+	}
+	if s.State == "not_created" {
+		if o.Exists {
+			return s, errors.New("unrecorded VM exists in owned namespace; refuse to adopt or overwrite it")
+		}
+		if e = spec.Validate(); e != nil {
+			return s, e
+		}
+		if c.Preflight != nil {
+			if e = c.Preflight(spec, true); e != nil {
+				return s, e
+			}
+		}
+		s = State{Schema: 1, MachineID: protocol.ID(), State: "creating", Observed: "absent", Stage: "provision_configuration", Spec: spec, BackendVersion: config.LimaVersion}
+		if e = c.save(&s); e != nil {
+			return s, e
+		}
+	} else {
+		if creationFlags {
+			return s, errors.New("creation flags cannot change an existing machine; use up --local without them to resume")
+		}
+		if c.Preflight != nil {
+			if e = c.Preflight(s.Spec, !o.Exists); e != nil {
+				return s, e
+			}
+		}
+	}
+	if !o.Exists && s.Stage != "provision_configuration" {
+		return c.fail(&s, errors.New("recorded VM is missing; refusing to silently recreate its disk"))
+	}
+	if !o.Exists {
+		if e = c.Backend.Create(ctx, s); e != nil {
+			return c.fail(&s, e)
+		}
+	}
+	if e = c.Backend.Validate(ctx); e != nil {
+		return c.fail(&s, e)
+	}
+	s.State = "starting"
+	s.Stage = "boot_and_provision"
+	s.Observed = o.Status
+	s.Guest = nil
+	s.LastError = ""
+	if e = c.save(&s); e != nil {
+		return s, e
+	}
+	if o.Status != "Running" {
+		if e = c.Backend.Start(ctx); e != nil {
+			return c.fail(&s, e)
+		}
+	}
+	s.Stage = "guest_handshake"
+	if e = c.save(&s); e != nil {
+		return s, e
+	}
+	g, e := c.Backend.Handshake(ctx, s)
+	if e != nil {
+		return c.fail(&s, e)
+	}
+	s.State = "ready"
+	s.Observed = "Running"
+	s.Stage = "guest_service_ready"
+	s.Guest = g
+	if e = c.save(&s); e != nil {
+		return s, e
+	}
+	return s, nil
+}
+func (c *Controller) Status(ctx context.Context) (State, error) {
+	unlock, e := storage.Lock(c.Root)
+	if e != nil {
+		return State{}, e
+	}
+	defer unlock()
+	s, e := c.load()
+	if e != nil {
+		return s, e
+	}
+	if s.State == "not_created" {
+		return s, nil
+	}
+	o, e := c.Backend.Observe(ctx)
+	if e != nil {
+		s.Observed = "unknown"
+		return c.fail(&s, e)
+	}
+	s.Observed = o.Status
+	s.Guest = nil
+	if !o.Exists {
+		return c.fail(&s, errors.New("recorded machine missing from runtime; preserving state, do not recreate automatically"))
+	}
+	if o.Status == "Stopped" {
+		s.State = "stopped"
+		s.Stage = ""
+		s.LastError = ""
+		e = c.save(&s)
+		return s, e
+	}
+	if o.Status != "Running" {
+		s.State = "error"
+		s.LastError = "BACKEND_NOT_RUNNING"
+		e = c.save(&s)
+		return s, e
+	}
+	if e = c.Backend.Validate(ctx); e != nil {
+		return c.fail(&s, e)
+	}
+	g, e := c.Backend.Handshake(ctx, s)
+	if e != nil {
+		return c.fail(&s, e)
+	}
+	s.State = "ready"
+	s.Stage = "guest_service_ready"
+	s.Guest = g
+	s.LastError = ""
+	return s, c.save(&s)
+}
+func (c *Controller) Stop(ctx context.Context) (State, error) {
+	unlock, e := storage.Lock(c.Root)
+	if e != nil {
+		return State{}, e
+	}
+	defer unlock()
+	s, e := c.load()
+	if e != nil {
+		return s, e
+	}
+	if s.State == "not_created" {
+		return s, nil
+	}
+	o, e := c.Backend.Observe(ctx)
+	if e != nil {
+		s.Observed = "unknown"
+		return c.fail(&s, e)
+	}
+	if !o.Exists {
+		return c.fail(&s, errors.New("recorded VM missing; no unrelated runtime resources were changed"))
+	}
+	if o.Status == "Stopped" {
+		s.State = "stopped"
+		s.Observed = "Stopped"
+		s.Guest = nil
+		s.LastError = ""
+		s.Stage = ""
+		return s, c.save(&s)
+	}
+	s.State = "stopping"
+	s.Stage = "graceful_shutdown"
+	s.Guest = nil
+	if e = c.save(&s); e != nil {
+		return s, e
+	}
+	if e = c.Backend.Stop(ctx); e != nil {
+		s.Observed = "unknown"
+		return c.fail(&s, fmt.Errorf("shutdown unconfirmed; VM may still run, inspect status/logs: %w", e))
+	}
+	o, e = c.Backend.Observe(ctx)
+	if e != nil || o.Status != "Stopped" {
+		s.Observed = "unknown"
+		return c.fail(&s, errors.New("shutdown not confirmed by runtime; VM may still run"))
+	}
+	s.State = "stopped"
+	s.Observed = "Stopped"
+	s.Stage = ""
+	s.LastError = ""
+	return s, c.save(&s)
+}

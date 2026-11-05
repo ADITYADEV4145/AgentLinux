@@ -1,73 +1,39 @@
-# Implementation roadmap
+# Roadmap
 
-Phase 0 • 2026-11-04. Only Phase 0 is complete. Later phases describe work to do, not implemented features. Each phase ends with a buildable tree, appropriate checks, updated verification evidence and a local commit reviewed for secrets/personal files. No automated AI contributor or co-author attribution. Pushes, releases, paid allocation and public deployment are separate actions.
+Updated 2026-11-05. Commit after every completed phase, reviewing staged code/docs for secrets and personal data; no AI contributor/co-author attribution. Paid resources, publishing and deployments require separate authorization.
 
-## Phase 0 — Research and specification (complete)
+## Phase 0 — Complete
 
-Outcome: product scope, runtime/desktop/channel/viewer choices, local/cloud API boundaries, source-backed comparisons, license inventory, risks and real-Mac acceptance plan. Deliverables: README, product, architecture, research, roadmap, verification and four ADRs. No executable implementation or infrastructure.
+Product specification, source-backed architecture comparisons, local/cloud boundaries, guest trust model, license inventory and validation plan. Original commit afaa74b remains intact. Research facts are documentation/source observations, not hardware tests.
 
-Exit: a concrete local path is selected; remaining uncertainty is a set of bounded validation experiments with failure decisions rather than an unspecified architecture. Cloud contracts distinguish unsupported features and persistent/ephemeral profiles. No paid resources or deployment. Documentation checks and commit evidence are recorded in verification; hardware claims remain unproven.
+## Phase 1 — Local lifecycle and guest communication
 
-## Phase 1 — Prove the guest desktop on a real Mac
+Implemented the user's narrower Phase 1 scope: CLI doctor/up/status/stop/logs, private configuration/state, CPU/RAM/disk validation, pinned image download or local QCOW2 input, idempotent provisioning, generated keys and strict application SSH pinning, systemd non-sudo guest service, framed hello/health/probe, honest readiness, interrupted-state reconciliation, locking and bounded sanitized logs.
 
-Implement only the smallest working path:
+Real Mac boot, guest operation, stop/restart, identity/session changes, persistence and wrong-key rejection have evidence. Automated race tests and vet cover protocol, state failures, paths, resources, parsing, timeouts, output limits and config/image safety. scripts/acceptance.py reproduces a smaller lifecycle acceptance test and cleans only its owned temporary machine. Full desktop acceptance from the original Phase 0 roadmap has **not** happened and is no longer a Phase 1 exit claim.
 
-1. Initialize Go module with official MCP Go SDK candidate v1.8.0 only when needed, validated toolchain pin, original-code LICENSE, dependency inventory, build commands and baseline CI. Review exact dependency licenses/transitives; do not vendor unrelated projects.
-2. Implement `doctor` read-only checks and resource plan: native architecture/macOS/runtime version, virtualization availability, CPU/RAM/disk, image size/expansion/headroom, network prerequisites. Unknown resource availability must not silently pass.
-3. Create a private per-machine Lima namespace, explicit plain/VZ config and verified dated Debian ARM64 image. Validate resolved mounts, proxy values, credentials and forwarding. Pin selected runtime/image after compatibility test.
-4. Provision authenticated Xvfb, Xfce, browser, fonts, capture/input tools and root-owned Go helper under a separate non-sudo desktop user. Generate/pin guest host key through owned provisioning; establish strict SSH application channel. Validate root/bootstrap boundaries.
-5. Minimal CLI create/start/status/screenshot/input/stop on one owned disposable machine. Use reviewed guest test fixtures rather than an arbitrary exec tool. Run the first E2E scenario in verification. Do not build terminal graphics before a valid screenshot and verified input exist.
+Corrections from real evidence: compressed provisioning under a 3 MiB budget; selected-field Lima inventory; explicit loopback SSH fallback. See ADR 0005. Exact final verification/cleanup status is recorded in verification.md.
 
-Exit: three consecutive real boot/control/stop runs, PNG correctness and Unicode task evidence, host pointer/clipboard unchanged, no host mounts/agent credentials, bounded failure behavior, successful stop. Build/unit checks cover config restrictions, request/image bounds, coordinate mapping, argument injection and timeout/cleanup. Runtime/image/host details and performance observations are recorded. No VM startup or minimum-RAM claims without these results.
+## Phase 2 — Guest desktop/control slice (not started)
 
-If 13 GiB free is insufficient, complete source/build/schema work and report image/VM testing blocked until a user-selected volume or additional free space is available. Do not delete user data or quietly shrink requirements to make a test fit. If VZ boot or strict SSH enrollment fails, preserve logs, test a deliberate pinned-image/config correction and revise ADR before changing runtime. Offline networking remains unsupported until proven.
+Provision Xvfb/Xfce/Chromium under the non-sudo guest account. Add bounded PNG capture, fixed-display XTEST input, guest-only Unicode paste modes, frame/session generations and action errors. Test actual browser typing, coordinates, input cleanup, service/display restarts and the host pointer/clipboard boundary. Keep guest input implementation out of the host executable path. No arbitrary execution tool without a separate trust/timeout/output policy.
 
-## Phase 2 — Coherent lifecycle and MCP
+Exit: actual screenshot → action → screenshot task passes on the Mac; Unicode/focus limitations and resource measurements documented. Recheck image/package licenses and browser sandbox. Commit tested work and update docs.
 
-Implement broker/private Unix socket, atomic machine/operation state and reconciliation, API schemas, readiness, IDs/errors, capabilities, session/frame generations, input leases, forced guest command, cancellation and bounded deduplication. Add official SDK stdio tools bound to one selected machine. Keep stdout protocol-only. Reject unknown capabilities, stale sessions, unauthorized ownership and malformed data before sending actions.
+## Phase 3 — Shared API, MCP and observable lifecycle
 
-Exit: real MCP client observes/clicks/types/verifies the demo fixture, older protocol negotiation tested through SDK, stop/restart persistence verified, guest/helper/broker crash and unknown-action-outcome paths exercised. Contract tests use explicit test doubles for lifecycle failure cases; they do not count as VM evidence. CLI examples become actual documented commands only when passing. No cloud success placeholder.
+Implement the broker/private Unix socket and shared application operations, stable error/capability schemas, input ownership/takeover and operation reconciliation. Add the official maintained MCP SDK with explicit version pin only when integrating it. Validate a real client, older supported protocol negotiation, cancellation, stale frames and service failure. Do not count backend doubles as VM evidence.
 
-## Phase 3 — Visible and interactive desktop
+## Phase 4 — Terminal visibility and local MVP hardening
 
-Implement Kitty capability/pixel queries, bounded PNG refresh, keyboard/mouse/paste, shortcut palette and terminal cleanup. Add authenticated loopback browser fallback sharing the same frame/input operations. Human takeover preempts agent input; viewer exit does not stop the VM. Record exact Kitty/browser versions.
+Kitty first, bounded PNG refresh and real keyboard/mouse mapping; authenticated local browser fallback; human takeover; terminal mode cleanup. Measure actual performance/scaling/backpressure. Establish a host/runtime support matrix, recovery/update behavior and installer/uninstall plan. Add distributor signature verification and complete artifact/image license/SBOM/notices review before distribution. No release publication without authorization.
 
-Exit: watch/control full demo in Kitty and browser; unsupported terminal/redirected stdout falls back cleanly; test resize/Retina mapping, letterboxing, slow renderer/backpressure, Ctrl+] and signal cleanup, disconnect/restart, token expiry, Origin/CSRF denial and two viewers competing for control. Publish only measured frame rate/latency and known keyboard/accessibility limitations.
+## Phase 5 — Managed cloud pilot (not started)
 
-## Phase 4 — Local MVP hardening and distribution
+No-cost provider/license/contract review first. Evaluate one fixed region/provider for real isolation, auth, quotas, private viewing, persistent/ephemeral profiles, TTL, cleanup and metering. Only allocate paid resources after explicit authorization. Local/cloud operations share logical contracts with capability differences; no fake cloud implementation or silent local fallback. Cross-workspace denial, ambiguous allocation, orphan cleanup and storage retention must be tested before public use. Billing activation remains separate.
 
-Measure CPU/RSS/disk/capture/viewer behavior across at least two recorded Apple silicon configurations if available; derive a supported host/version/resource matrix. Test image integrity failures, package install interruption, disk pressure, shutdown timeout and upgrade/recovery without data loss. Validate offline mode or document it unsupported; add network restriction only with actual enforcement/evidence.
+## Outstanding risks
 
-Produce reviewed installation/build/uninstall paths, checksums, SBOM, third-party notices, image package/source compliance and signed/notarized artifacts where applicable. A development build is not a publicly published release. Retain no host grants and no telemetry by default. No release/package publication without authorization.
+NAT reaches host/LAN; offline/egress-restricted modes are not validated. Lima bootstrap management SSH is trusted and weaker than application pinning. Provisioning data retains guest host-key material in private state. Detached image signatures and broad host compatibility are unverified. No graphical desktop/MCP/viewer exists yet. Stronger hostile-guest security, distribution compliance and performance claims require further evidence.
 
-Exit: local acceptance reproducible on a clean Mac, accurate diagnostics, resources/version minimums justified by measurements, no outstanding critical data-loss/control-path defects, release artifact audit complete. If only one hardware configuration is available, document that limit instead of claiming broad support.
-
-## Phase 5 — Cloud adapter validation (future; authorization required for paid tests)
-
-First do no-cost contract/SDK/license review: region, architecture, image customization, auth/viewing, resource hard limits, stop/persistence, TTL, lookup/idempotency and cleanup behavior for E2B/Daytona. Select one provider only after evidence. Add a real adapter, OIDC/workspace authorization, private viewing gateway, usage events and resource reconciliation. Reject unsupported profile requirements before allocation.
-
-Paid experiments and public endpoints require explicit authorization before execution. Test identity/cross-workspace denial, token expiry/revocation, concurrent control, partial create, provider outage, idle/hard lifetime, persisted stop/restart and verified cleanup. Compute TTL and storage retention are distinct. No billing activation or multi-region orchestration.
-
-Exit: one-region pilot passes common contract where advertised, records capability differences/limits and measured costs, and reconciles all experiment resources to deleted or intentionally retained ownership records. Update roadmap honestly if a provider cannot support the contract.
-
-## Major risks and validation ownership
-
-| Risk | Earliest experiment / phase | Decision on failure |
-| --- | --- | --- |
-| Disk capacity or unavailable RAM facts | Host preflight, Phase 1 | Refuse allocation; complete independent source work; request storage/hardware prerequisite |
-| ARM64 UEFI image or plain-mode VZ/vsock mismatch | Boot + strict SSH enrollment, Phase 1 | Deliberate pinned image/runtime correction; reopen ADR before replacing runtime |
-| Lima leaks mounts, proxy credentials, forwards, identity metadata | Resolved config + guest/runtime inspection, Phase 1 | Fail closed, remove inherited config; never waive mount/credential default |
-| NAT reaches host/LAN | Probe only owned test endpoints, Phase 1/4 | Explicit limitation and consent; no restricted-network label without enforcement |
-| Unicode paste/X11 focus failure | Real Chromium/editor/terminal fixtures, Phase 1/2 | Restrict advertised paste modes; surface errors and require verification |
-| Guest parser/image resource exhaustion | Bounds/malformed cases, Phase 1/2 | Reject/drop and disconnect; never allocate unbounded buffers |
-| Duplicate actions after timeout/reboot | Lost acknowledgement + generation tests, Phase 2 | OUTCOME_UNKNOWN; fresh screenshot, no automatic mutation retry |
-| Viewer is too slow or changes coordinates | Retina/resize/backpressure measurements, Phase 3 | Reduce refresh; on-demand mode; profile before optimizing codec |
-| Weak desktop accessibility | Keyboard/zoom/status testing, Phase 3 | Document raster limitation; plan AT-SPI capability separately |
-| License or redistribution restrictions | Exact dependency/image review, Phase 1/4 | Replace dependency or satisfy obligations before distribution |
-| Provider capabilities differ from local | No-cost review then authorized tests, Phase 5 | Report unsupported features; no fake parity or unapproved costs |
-
-## End-of-phase reporting
-
-Report actual outcome, key files, runnable commands, automated results, real hardware/VM results, skipped tests and reasons, limits/risks, git status and commit, exit-criteria verdict and exact next action. Keep docs accurate after scope changes. Commit only the completed phase's reviewed files; do not commit runtime state, credentials, recordings or personal paths. Keep API-changing phases compatible with a documented version policy. Do not mark later phases complete from mock-only results.
-
-Next action: on Phase 1 authorization, implement read-only host/resource preflight and restrictive Lima manifest validation before downloading any image or installing a runtime.
+Next action after Phase 1: implement and validate the guest desktop/capture/input slice on the established VM/service path. End every phase with actual outcome, key files, commands, automated/hardware/skipped verification, limits, git status/commit, exit verdict and exact next action.

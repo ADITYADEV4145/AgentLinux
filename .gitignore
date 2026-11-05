@@ -26,3 +26,8 @@ bin/
 dist/
 .build/
 .DS_Store
+.tools/
+.cache/
+
+# Python developer script cache
+__pycache__/

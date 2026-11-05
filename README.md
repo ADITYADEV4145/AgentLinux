@@ -2,17 +2,31 @@
 
 Give your agent a Linux computer. Run it on your Mac or in the cloud.
 
-**Status: Phase 0 specification complete; no runnable product yet.** Agent Linux is a working name. Local development targets Apple silicon Macs. Cloud support is a future phase, not an available service.
+**Status: Phase 1 development implementation.** Local VM creation, startup, actual guest handshake/probe, status, graceful shutdown and sanitized logs are implemented and tested on one Apple silicon Mac. Desktop control, terminal/browser viewing, MCP and cloud remain unimplemented. Agent Linux is a working name.
 
-The recommended first implementation uses Lima with Apple's Virtualization.framework, Debian 13 ARM64, an Xfce desktop on Xvfb, and a Go CLI/MCP server. A guest helper handles screenshots and input over SSH. Kitty is the first terminal viewer target; a local browser viewer is the fallback. These are design decisions, not tested compatibility claims.
+Requirements: Apple silicon, development target macOS 14+, Go 1.26.1 to build, and Lima **2.2.1**. Only macOS 26.5 has real acceptance evidence so far; this is not a broad support or minimum-resource guarantee.
 
-- [Product and proposed commands](docs/product.md)
-- [Architecture, contracts, and dependency review](docs/architecture.md)
-- [Research and primary sources](docs/research.md)
-- [Implementation phases](docs/roadmap.md)
-- [Verification evidence and first Mac experiment](docs/verification.md)
-- [Decision records](docs/decisions/)
+```sh
+make build
+make test check
+bin/agent-linux doctor --lima /absolute/path/to/limactl --json
+bin/agent-linux up --local --network=nat --lima /absolute/path/to/limactl
+bin/agent-linux status --lima /absolute/path/to/limactl --json
+bin/agent-linux logs --backend
+bin/agent-linux stop --lima /absolute/path/to/limactl
+```
 
-No installer, VM image, build target, or CLI is provided in this phase. Host folders, host clipboard, SSH agent forwarding, and host devices must remain disabled by default. Network access is a separate boundary: a VM with networking can reach services outside the guest.
+If `limactl` is on PATH, omit `--lima`. Creation-only resource options: `--cpus=2 --memory=2 --disk=16` (GiB for memory/disk). Default private state: `~/.local/share/agent-linux/local`; `--state-dir=/absolute/private/path` selects an isolated machine namespace. `up` resumes it without creation flags after interruption or shutdown. `--help` and per-command `--help` describe limits and deadlines. JSON failures have nonzero exit status.
 
-Apache-2.0 is recommended for original project code; adoption and the LICENSE file are deferred to the implementation phase. Third-party components retain their own licenses. No upstream implementation or assets have been copied into this repository.
+The guest service is read-only and reports **service readiness**, not a graphical desktop. There is no arbitrary command-execution tool. `stop` preserves the disk. Closing a CLI does not imply the VM stopped; use status/stop. No force-stop or deletion CLI is provided yet.
+
+No host mounts, shared host clipboard, host credentials, forwarded SSH agent/X11, or device access. Application control uses restricted SSH over a loopback endpoint and a guest-only Unix socket, with unique generated keys and pinned guest host identity. **NAT can reach host/LAN services; it is not network isolation.** The initial image download is checked against a reviewed SHA-512 pin; detached image signatures are not automated.
+
+- [Provisioning, image provenance and local prebuilt images](images/debian/README.md)
+- [Guest protocol and limits](docs/guest-protocol.md)
+- [Product specification](docs/product.md)
+- [Architecture](docs/architecture.md) and [Phase 1 corrections](docs/decisions/0005-phase1-evidence.md)
+- [Verification evidence](docs/verification.md), [roadmap](docs/roadmap.md), [research](docs/research.md)
+- [Third-party licenses and redistribution limits](third_party/README.md)
+
+Original code is Apache-2.0; third-party components retain their licenses. No runtime/images, secrets, machine state or private recordings are committed. No paid resources, hosted service or public release has been created.

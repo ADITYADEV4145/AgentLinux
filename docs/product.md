@@ -1,6 +1,6 @@
 # Product specification
 
-Phase 0 • 2026-11-04 • Proposed behavior unless explicitly marked verified.
+Phase 0 specification, updated 2026-11-05. Phase 1 implements only local lifecycle and minimal guest health/probe. The full desktop MVP and proposed commands below remain targets; README documents the commands that actually exist.
 
 ## User, problem, and positioning
 
