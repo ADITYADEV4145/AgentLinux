@@ -3,6 +3,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 )
 
 // Root is a private application directory, not an arbitrary existing data directory.
@@ -137,6 +139,9 @@ func Read(root, name string, v any) error {
 	}
 	return nil
 }
+
+var ErrBusy = errors.New("MACHINE_BUSY: another process controls this machine; retry after it finishes")
+
 func Lock(root string) (func(), error) {
 	if e := SafeFile(root, "lock"); e != nil {
 		return nil, e
@@ -147,7 +152,28 @@ func Lock(root string) (func(), error) {
 	}
 	if e = syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); e != nil {
 		f.Close()
-		return nil, errors.New("MACHINE_BUSY: another process controls this machine; retry after it finishes")
+		return nil, ErrBusy
 	}
 	return func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN); f.Close() }, nil
+}
+
+// LockWait bounds contention without queuing a request past its caller deadline.
+func LockWait(ctx context.Context, root string, limit time.Duration) (func(), error) {
+	deadline := time.NewTimer(limit)
+	defer deadline.Stop()
+	tick := time.NewTicker(25 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		unlock, e := Lock(root)
+		if !errors.Is(e, ErrBusy) {
+			return unlock, e
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-deadline.C:
+			return nil, ErrBusy
+		case <-tick.C:
+		}
+	}
 }

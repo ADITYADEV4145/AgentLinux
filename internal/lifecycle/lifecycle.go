@@ -290,7 +290,7 @@ func (c *Controller) Stop(ctx context.Context) (State, error) {
 
 // GuestCall holds the local machine lock throughout a single real guest request.
 func (c *Controller) GuestCall(ctx context.Context, q protocol.Request) (*protocol.Info, error) {
-	unlock, e := storage.Lock(c.Root)
+	unlock, e := storage.LockWait(ctx, c.Root, 2*time.Second)
 	if e != nil {
 		return nil, e
 	}

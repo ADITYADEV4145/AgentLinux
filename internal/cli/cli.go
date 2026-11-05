@@ -35,7 +35,8 @@ Usage: agent-linux COMMAND [options]
   stop            Request graceful shutdown and confirm runtime stopped
   logs            Show bounded, sanitized lifecycle or backend diagnostics
 
-Use COMMAND --help for options. Cloud and live viewers are not implemented.
+Use COMMAND --help for options. Cloud is not implemented.
+  view            Live view-only desktop: Kitty graphics or secure loopback web
   mcp             Serve the existing local machine over MCP stdio
   mcp-config      Print client configuration; never modifies client settings
 Software: browsers list/install; packages install/refresh/upgrade/profiles.
@@ -254,6 +255,9 @@ type Envelope struct {
 }
 
 func Run(ctx context.Context, args []string, out, errout io.Writer) int {
+	if len(args) > 0 && args[0] == "view" {
+		return runView(ctx, args[1:], out, errout)
+	}
 	if len(args) > 0 && (args[0] == "mcp" || args[0] == "mcp-config") {
 		return runMCP(ctx, args, out, errout)
 	}

@@ -3,9 +3,12 @@
 package storage
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func owned(t *testing.T) string {
@@ -82,4 +85,26 @@ func TestRejectUnownedDirectory(t *testing.T) {
 	if _, e = Root(r); e == nil {
 		t.Fatal("claimed unrelated directory")
 	}
+}
+
+func TestBoundedLockWaitAndCancellation(t *testing.T) {
+	r := t.TempDir()
+	unlock, e := Lock(r)
+	if e != nil {
+		t.Fatal(e)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, e = LockWait(ctx, r, time.Second); !errors.Is(e, context.Canceled) {
+		t.Fatal(e)
+	}
+	if _, e = LockWait(context.Background(), r, 20*time.Millisecond); !errors.Is(e, ErrBusy) {
+		t.Fatal(e)
+	}
+	unlock()
+	release, e := LockWait(context.Background(), r, time.Second)
+	if e != nil {
+		t.Fatal(e)
+	}
+	release()
 }

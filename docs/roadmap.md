@@ -32,9 +32,11 @@ Extend the working Debian/Xfce stack: launcher/files/settings targets, focused e
 
 Phase 4 inputs remain actual guest scrot PNGs at 1280×800 scale 1 and the existing X11/MCP control contract. Live rendering, terminal input/resize/cleanup, measured throughput and human/agent takeover are still Phase 4 work. Keep Go for the first viewer unless profiling identifies a concrete reason for a narrow native/Rust component.
 
-## Phase 4 — Terminal visibility and local MVP hardening
+## Phase 4 — Terminal viewer (implementation present; visual acceptance pending)
 
-Kitty first, bounded PNG refresh and real keyboard/mouse mapping; authenticated local browser fallback; human takeover; terminal mode cleanup. Measure actual performance/scaling/backpressure. Establish a host/runtime support matrix, recovery/update behavior and installer/uninstall plan. Add distributor signature verification and complete artifact/image license/SBOM/notices review before distribution. No release publication without authorization.
+Implemented Kitty direct PNG rendering, active query/real pixel sizing, raw terminal cleanup, bounded capture/backpressure/unchanged-frame suppression, and secure live loopback fallback. View-only human observer; agents control through MCP. The fallback and actual VM/MCP changes/restart/pause/auth checks passed. Actual Kitty 0.50.0 PTY query/resize/q/SIGTERM cleanup passed, but **visible graphics and terminal recording are not verified** because the Mac is locked/asleep. Complete the explicit unlocked-Mac checklist in viewer.md before declaring Phase 4 fully accepted.
+
+Remaining after that gate: optional human input with ownership/takeover, measured optimizations, broad terminal/host support matrix, and distributor signature/installer/SBOM hardening. No fixed-FPS or production-ready claim. No release publication without authorization.
 
 ## Phase 5 — Managed cloud pilot (not started)
 
@@ -44,4 +46,4 @@ No-cost provider/license/contract review first. Evaluate one fixed region/provid
 
 NAT reaches host/LAN; offline/egress-restricted modes are not validated. Lima bootstrap management SSH is trusted and weaker than application pinning. Provisioning data retains guest host-key material in private state. Detached image signatures and broad host compatibility are unverified. MCP and desktop/control are implemented; no live viewer exists yet. Stronger hostile-guest security, distribution compliance and performance claims require further evidence.
 
-Next action after Phase 3.5: implement measured terminal visibility with explicit human/agent ownership and takeover, while preserving the tested guest and MCP contracts. End every phase with actual outcome, key files, commands, automated/hardware/skipped verification, limits, git status/commit, exit verdict and exact next action.
+Next action: on an unlocked/awake Mac, verify and record Kitty graphics under MCP actions and resizing, then assess human input ownership before adding interaction. End every phase with actual outcome, key files, commands, automated/hardware/skipped verification, limits, git status/commit, exit verdict and exact next action.

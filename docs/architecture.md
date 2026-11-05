@@ -2,6 +2,12 @@
 
 Phase 0 • 2026-11-04 • Decisions below specify intended implementation. The Phase 0 design below is retained as the target architecture; current implementation and hardware evidence are distinguished in the snapshot below. Research facts and links are in [research.md](research.md); experiments and evidence are in [verification.md](verification.md).
 
+## Phase 4 implementation snapshot (2026-11-05)
+
+A view-only Go consumer renders the common guest PNG source through Kitty's direct graphics protocol or a secure live loopback web fallback. One synchronous capture/cache, bounded output/network requests, hash/ETag suppression, static-frame backoff and no background web worker limit work. Actual terminal pixel/cell dimensions determine aspect-aware placement; raw/alternate-screen/cursor state is unwound on exit. No viewer input or implicit VM lifecycle action exists. Guest calls get a bounded two-second lock wait so capture and MCP can serialize.
+
+The real web fallback, MCP-driven changes, authorization/pause/reconnect and VM persistence are verified. Kitty 0.50.0 protocol/PNG acknowledgement, real PTY resize and cleanup are exercised; visible terminal graphics/recording remain pending because the Mac was locked/asleep. Do not count a LIVE status or blank internal capture as visual acceptance. See [viewer](viewer.md), [ADR 0009](decisions/0009-view-only-viewer.md), and [verification](verification.md). No cloud, video codec, human input lease or language rewrite was added.
+
 ## Phase 3.5 implementation snapshot (2026-11-05)
 
 Keep Debian 13 ARM64/Xfce/Xvfb and the existing VZ/SSH/common-machine/MCP architecture. New recipe desktop-3.5.0 adds Firefox ESR, ordinary file-manager/accessibility/thumbnail services and a modest Git/SSH/curl/Python development baseline. Thunar/settings/App Finder and explicit Firefox/Chromium are exposed through fixed app launch/focus, without changing screenshot dimensions or input routing. Readiness includes live panel/desktop presence. Protocol remains 2.0; helper 0.3.5 and legacy 0.2.0 are accepted, with old capabilities/recipe limits explicit.

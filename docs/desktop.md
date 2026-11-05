@@ -25,7 +25,7 @@ bin/agent-linux mcp-config --client codex
 bin/agent-linux stop
 ```
 
-The PNG output path must be new; existing files are not overwritten. The image and MCP client expose the actual graphical computer. There is no live terminal viewer yet. `browser` remains an explicit alias for Chromium; `firefox` launches Firefox ESR. Chrome and Edge are never substituted. The panel's Applications menu and Application Finder provide ordinary guest desktop launching; Thunar manages files, xfce4-terminal runs Bash, Mousepad edits files, and Xfce Settings configures the guest. Guest home directories include Desktop/Documents/Downloads/Projects.
+The PNG output path must be new; existing files are not overwritten. The image and MCP client expose the actual graphical computer. Phase 4 adds a view-only Kitty implementation (visual acceptance pending) and a verified live local web fallback; see [viewer.md](viewer.md). `browser` remains an explicit alias for Chromium; `firefox` launches Firefox ESR. Chrome and Edge are never substituted. The panel's Applications menu and Application Finder provide ordinary guest desktop launching; Thunar manages files, xfce4-terminal runs Bash, Mousepad edits files, and Xfce Settings configures the guest. Guest home directories include Desktop/Documents/Downloads/Projects.
 
 ## Keep the existing distribution and display model
 
@@ -52,7 +52,7 @@ Local support is ARM64 Linux on Apple silicon through Lima 2.2.1/VZ. Cloud is st
 
 Move source files and ordinary documents through a future explicit export/import facility or user-managed guest networking. Do not promise portable executables, identical browser profiles, transferable encrypted credentials, VM disk compatibility, live migration, or application parity. Persistent machines retain their own disk; provider ephemeral sessions require a separate lifecycle contract. No cloud stub, host mount or automatic data transfer is added.
 
-## Phase 4 inputs
+## Phase 4 inputs (handoff; current viewer status is in viewer.md)
 
 - Real Xfce desktop and apps, authenticated guest X11 capture/input and real MCP operations.
 - Current source: bounded scrot PNG frames, 1280×800, scale 1, one display, top-left coordinates; generation/session/freshness rules already defined.

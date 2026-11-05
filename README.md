@@ -2,7 +2,7 @@
 
 Give your agent a Linux computer. Run it on your Mac or in the cloud.
 
-**Phase 3.5 development implementation:** a real Debian ARM64 desktop on Apple virtualization, Chromium and Firefox ESR, launcher/files/settings/editor/terminal controls, guest screenshots/input, bounded guest commands, explicit guest package maintenance, and local lifecycle control. Tested on one Apple silicon Mac. An official-SDK MCP stdio server exposes the local machine to agents. Live terminal/browser viewers and cloud remain future work. Agent Linux is a working name.
+**Phase 4 development implementation (terminal visual acceptance pending):** a real Debian ARM64 desktop on Apple virtualization, Chromium and Firefox ESR, launcher/files/settings/editor/terminal controls, guest screenshots/input, bounded guest commands, explicit guest package maintenance, and local lifecycle control. Tested on one Apple silicon Mac. An official-SDK MCP stdio server exposes the local machine to agents. A view-only Kitty renderer and a verified live local web fallback are implemented. Kitty visual verification is pending an unlocked/awake Mac; cloud remains future work. Agent Linux is a working name.
 
 Build requirements: Go 1.26.1, Apple silicon Mac, and Lima **2.2.1**. macOS 26.5 has actual acceptance evidence; macOS 14+ is a development target, not a tested compatibility guarantee.
 
@@ -16,6 +16,8 @@ If limactl is on PATH, omit `--lima` from these and subsequent commands. Otherwi
 
 ```sh
 bin/agent-linux status --json
+bin/agent-linux view          # Kitty target; automatic live web fallback
+bin/agent-linux view --web    # verified live loopback fallback
 bin/agent-linux screenshot --output /tmp/agent-linux.png
 bin/agent-linux open launcher
 bin/agent-linux open files
@@ -46,6 +48,7 @@ Default private machine state: `~/.local/share/agent-linux/local`; `--state-dir`
 
 No host mounts, shared host clipboard, SSH-agent/X11 forwarding, host device or host desktop control. Application communication is pinned SSH over loopback to a guest Unix socket. **NAT can reach host/LAN services; it is not network isolation.** X11 apps share the guest desktop, and guest execution is powerful. Image integrity uses a reviewed SHA-512 pin; detached signature validation is not automated.
 
+- [Viewer setup, safety, tested versions and pending acceptance](docs/viewer.md)
 - [Desktop and Phase 4 readiness](docs/desktop.md)
 - [Browser compatibility](docs/browsers.md) and [development/package maintenance](docs/development.md)
 - [MCP tools, client setup and agent workflow](docs/mcp.md)
