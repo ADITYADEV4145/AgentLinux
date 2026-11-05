@@ -1,0 +1,28 @@
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets/
+
+# Machine state, guest images and private acceptance evidence
+.agentlinux/
+.lima/
+state/
+artifacts/
+*.qcow2
+*.img
+*.iso
+*.ipsw
+*.raw
+*.log
+
+# Build and editor outputs
+bin/
+dist/
+.build/
+.DS_Store
