@@ -3,7 +3,7 @@
 """Opt-in real Kitty/VM acceptance. Only controls a supplied isolated test socket.
 
 Requires Kitty 0.50.0, an unlocked Mac, Pillow, Go, and optional ffmpeg. The VM
-must be an explicitly selected agentlinux-viewer-acceptance-* fixture. No Mac
+must be an explicitly selected agentlinux-viewer-acceptance-* or phase55 fixture. No Mac
 pointer, clipboard, global terminal settings or personal shell is controlled.
 """
 import argparse
@@ -30,7 +30,7 @@ def main():
     evidence = args.evidence.resolve()
     evidence.mkdir(parents=True, exist_ok=False)
     root = args.state_dir.resolve()
-    if root.parent != Path('/private/tmp') or not root.name.startswith('agentlinux-viewer-acceptance-'):
+    if root.parent != Path('/private/tmp') or not root.name.startswith(('agentlinux-viewer-acceptance-', 'agentlinux-phase55-')):
         raise RuntimeError('only an explicitly selected isolated test VM is accepted')
     identity = json.loads((root / 'state.json').read_text())['machineId']
     base = [str(args.kitten.resolve()), '@', '--to', 'unix:' + str(args.socket.resolve())]

@@ -1,4 +1,6 @@
-# Modern desktop selection and actual evidence
+# Earlier GNOME quality research and actual evidence
+
+**Historical recommendation, superseded by [Phase 5.5](workstation.md) and [ADR 0012](decisions/0012-agent-workstation.md).** Preserve the feasibility evidence below; GNOME is not the assumed next default.
 
 Evaluated **2026-11-05**. Recommendation: **Ubuntu 26.04.1 LTS, ARM64, Ubuntu's GNOME 50 Wayland desktop**, with a quality-oriented starting VM profile of **4 vCPUs, 8 GiB RAM and a 40 GiB persistent disk**. With the existing at-most-half-host-RAM policy, an 8-GiB guest implies at least 16 GiB host RAM; the tested Mac has 24 GiB. No smaller-host support claim follows. This is the proposed next desktop target. The shipped 0.5.0-rc.1 backend remains **Debian 13/Xfce/X11** until GNOME passes the complete control/MCP/viewer acceptance below. No existing machine/template was migrated or reset for this evaluation.
 

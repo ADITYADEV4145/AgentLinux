@@ -1,6 +1,6 @@
 # Product specification
 
-Desktop quality direction (2026-11-05): Ubuntu 26.04.1 LTS ARM64/GNOME 50 is the recommended next full-desktop profile. A separate Mac feasibility VM produced actual Wayland screenshots and guest-only keyboard/Unicode clipboard evidence. The default remains Debian/Xfce until the complete GNOME/MCP/viewer acceptance gate passes; see desktop-quality.md.
+Phase 5.5 decision (2026-11-05): retain and polish Debian 13 ARM64/Xfce 4.20 after actual Xfce/Plasma MCP task comparisons. The full app set and current control/viewing stack remain; GNOME/Wayland is research rather than the assumed next default. See [workstation decision and measurements](workstation.md).
 
 Phase 5 local RC status (2026-11-05): local desktop/control and official-SDK MCP are implemented. New recipes add a complete Xfce app set, Chromium plus Firefox ESR, a small development baseline and explicit host-operator guest package maintenance. Live view-only Kitty 0.50.0 rendering and the browser fallback are verified on one Mac, including actual MCP-driven guest changes, resize, reconnect and terminal cleanup. Bounded explicit file copies, guarded reset/delete and offline local tool packaging/installation harden the developer workflow; no release is published. See release.md, security.md and viewer.md for the current surface and limits. An actual Codex agent operated Chromium through screenshots and guest input. Claude Code/VS Code setup is documented but their agent compatibility is untested. Cloud and direct human viewer input remain future scope; see [MCP setup](mcp.md) and [verification](verification.md).
 
@@ -16,13 +16,13 @@ A terminal alone cannot show what a desktop agent is doing. Running the agent's 
 
 On an Apple silicon Mac, create a new Linux machine, show its desktop in Kitty, and connect an MCP client. The agent opens an offline test page in guest Chromium, clicks a text field, enters `Hello, café — 日本語 👋`, submits the form, and screenshots the result. The user watches, pauses agent input, takes control, then hands control back. Stop and restart the machine; a file in the guest survives and the old session ID is rejected. The Mac's pointer and clipboard remain unchanged. This is a planned acceptance scenario, not a completed demo.
 
-The first engineering test is smaller: boot → guest helper → screenshot → click/type → verify → stop. That smaller path and MCP integration now work; terminal viewing remains future work.
+The first engineering test is smaller: boot → guest helper → screenshot → click/type → verify → stop. That smaller path and MCP integration now work; live view-only terminal viewing now works; human takeover remains planned.
 
 ## Local MVP
 
 - One named persistent machine at a time; one active desktop session and one input owner per machine. Use opaque IDs internally.
 - Explicit creation, start, status, screenshot, input, stop, and confirmed deletion. Closing a viewer leaves the machine running and says so.
-- Debian 13 ARM64 cloud image, minimal Xfce, Xvfb virtual X11 display, Chromium with its sandbox enabled. No physical monitor or macOS screen permissions required by design.
+- Debian 13 ARM64 cloud image, a complete Xfce workstation, Xvfb virtual X11 display, Chromium and Firefox ESR with browser sandboxes enabled. No physical monitor or macOS screen permissions required by design.
 - Go CLI, local broker, and stdio MCP adapter use the same application operations. MCP is bound to a selected machine; an agent cannot silently switch to another machine.
 - Kitty PNG graphics with bounded refresh; optional interactive terminal input after capture is validated. Local browser canvas fallback supports viewing and manual input.
 - No host mounts, shared host clipboard, host credentials, forwarded SSH agent, host device access, or automatic service-port forwarding. Resource and disk checks precede downloads.

@@ -1,0 +1,17 @@
+# ADR 0012: Retain a polished Debian/Xfce agent workstation
+
+Date: 2026-11-05. Status: accepted. Supersedes ADR 0011's GNOME-first direction.
+
+Choose **Debian 13 ARM64 / Xfce 4.20**, new recipe **workstation-5.5.0**, as the single production default. Keep the existing Lima/VZ, authenticated Xvfb/scrot/XTEST/guest-clipboard, common machine interface, MCP and view-only Kitty/web architecture. Existing sealed machines are not migrated.
+
+The priority order is agent reliability, efficiency, modern usability, maintenance. Both the repeatable Debian/Plasma 6.3.6 X11 candidate and polished Xfce completed two real official-SDK MCP workstation runs, with real screenshots, exact Unicode/clipboard files, both browsers, semantic form/drag/scroll oracles and focus checks. Three restarts per candidate reached actual desktop readiness. Xfce also passed an authenticated Codex visual browser workflow. This is a small hardware sample, not universal reliability proof: the final fresh Xfce guest had one earlier Chromium launch failure before an explicit successful retry; the cause remains unknown. The decision does not claim Xfce is inherently more reliable than Plasma.
+
+With equal 4-CPU/8-GiB/40-GiB guests, polished Xfce showed ~420 MiB memory pressure immediately after readiness and ~1,054 MiB after the task; Plasma ~600/~1,368 MiB. Physical disk allocation was ~3.48 versus ~4.37 GiB. Both warm-ready medians were ~8.88 s and screenshot medians ~0.48–0.51 s: no meaningful universal latency advantage is established. These modest memory/storage savings matter while a Mac runs other tools and for future compute sizing; no cloud cost benchmark is implied.
+
+Use maintained Debian Greybird/Adwaita/fonts, an original wallpaper and a simple labeled panel without compositor effects or extension dependencies. The complete file manager, terminal, editor, settings, launcher, Firefox/Chromium and developer tools remain. Humans can watch a coherent full workstation; direct viewer interaction still needs a machine-wide input lease and is not claimed. Prefer a working full app set over a decorative shell or a stripped image.
+
+Plasma is a credible richer alternative, not a failed desktop. Its first manual adaptation needed KIO runtime-directory permission correction and reverted when Lima reapplied its sealed Xfce provisioner; a fresh repeatable research recipe corrected both and passed. Current upstream Plasma 6.8 has retired X11 session startup, so adopting the tested Debian branch would not solve future Wayland qualification. Do not maintain a second production image now; keep the guarded, source-local research build for reproducibility.
+
+Ubuntu 26.04.1/GNOME 50 has the strongest earlier cohesive-UI feasibility evidence, but private Mutter APIs, standalone session recovery, complete gestures and real MCP/viewer integration remain unresolved. Do not select it before those pass or treat Xwayland as whole-desktop X11 automation. Fedora/GNOME was researched, not booted.
+
+Revisit after a maintained Wayland capture/input/session adapter passes the same task/restart/model/viewer suite, broader Mac/application trials reveal a reliability advantage, resource needs change, or Debian/Xfce support no longer meets requirements. AT-SPI may improve agent observation through a separate capability; no accessibility tree exists in today's MCP tools. See [workstation evidence, failure counts and limitations](../workstation.md) and [verification](../verification.md).

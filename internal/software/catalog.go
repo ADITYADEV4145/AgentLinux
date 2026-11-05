@@ -8,9 +8,10 @@ import (
 	"strings"
 )
 
-const Recipe = "desktop-3.5.0"
+const Recipe = "workstation-5.5.0"
 
 var DefaultPackages = []string{
+	"greybird-gtk-theme", "librsvg2-common",
 	"xvfb", "xauth", "x11-utils", "xfce4-session", "xfwm4", "xfdesktop4", "xfce4-panel", "xfce4-settings", "xfce4-appfinder", "thunar", "xfce4-terminal", "mousepad", "chromium", "chromium-sandbox", "firefox-esr", "xdotool", "scrot", "xclip", "dbus-x11", "fonts-dejavu", "fonts-noto-core", "fonts-noto-cjk", "fonts-noto-color-emoji", "adwaita-icon-theme", "desktop-file-utils", "xdg-utils", "bash", "bash-completion", "git", "openssh-client", "curl", "ca-certificates", "python3", "python3-venv", "less", "nano", "man-db", "procps", "util-linux", "gvfs", "tumbler", "at-spi2-core",
 }
 var Profiles = map[string][]string{

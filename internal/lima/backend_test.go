@@ -131,7 +131,7 @@ func TestCompleteRecipeAndMaintenance(t *testing.T) {
 		t.Fatal(e)
 	}
 	provision := parsed["provision"].([]any)[0].(map[string]any)["script"].(string)
-	for _, required := range []string{"firefox-esr", "thunar", "xfce4-appfinder", "python3-venv", "openssh-client", "desktop-3.5.0", "/usr/local/sbin/agent-linux-software"} {
+	for _, required := range []string{"firefox-esr", "thunar", "xfce4-appfinder", "python3-venv", "openssh-client", "workstation-5.5.0", "greybird-gtk-theme", "/usr/local/libexec/agent-linux-workstation", "/usr/local/share/backgrounds/agent-linux.svg", "/usr/local/sbin/agent-linux-software"} {
 		if !strings.Contains(provision, required) {
 			t.Fatal("missing recipe component", required)
 		}

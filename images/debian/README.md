@@ -1,8 +1,10 @@
-# Guest provisioning (current recipe: Phase 3.5)
+# Guest provisioning (current recipe: workstation-5.5.0)
 
 The selected image is Debian 13 genericcloud ARM64 build 20261001-2618. manifest.json records provenance and SHA-512; the same pin is compiled into internal/config/config.go. The checksum was cross-checked against Debian's HTTPS SHA512SUMS and Lima's pinned template. The downloader permits only HTTPS redirects to the documented Debian/ACC mirror hosts, verifies the full digest before use, and has no daily/latest fallback. This verifies integrity against a reviewed pin; **detached Debian image signatures are not automatically verified**. The Phase 0 aspiration to verify distributor signatures remains a release-hardening task; no independent signer-authenticity claim is made.
 
 No image is built or redistributed by this repository. Debian/Linux/packages have aggregate licenses, including GPL source obligations when redistributed. Obtain packages/source and license notices from Debian before publishing images. See third_party/README.md.
+
+Phase 5.5 retains this image and installs the full [polished Xfce workstation](../../docs/workstation.md). Its one-time theme/panel/font initialization preserves subsequent preferences; fixed resolution/compositing remain managed. The helper stays 0.5.0/protocol 2.0. Earlier Phase 3.5 details below are historical; sealed existing machines keep their own recipe.
 
 ## Reproduce
 

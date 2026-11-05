@@ -2,6 +2,10 @@
 
 Phase 0 • 2026-11-04 • Decisions below specify intended implementation. The Phase 0 design below is retained as the target architecture; current implementation and hardware evidence are distinguished in the snapshot below. Research facts and links are in [research.md](research.md); experiments and evidence are in [verification.md](verification.md).
 
+## Phase 5.5 workstation decision (2026-11-05)
+
+[ADR 0012](decisions/0012-agent-workstation.md) supersedes the earlier GNOME-first recommendation. Retain Debian 13 ARM64/Xfce 4.20 and the working X11 control backend; workstation-5.5.0 applies theme/font/panel defaults once on new guests. Persistent old templates and helper binaries remain sealed; replacing the host tool does not migrate them. Reproducible Plasma/X11 research builds remain separate from the one production recipe. [Actual comparison and limitations](workstation.md) distinguish MCP tasks, a real Codex workflow, native Kitty observations and mocked tests. No accessibility tree, Wayland backend or human input lease is implemented.
+
 ## Phase 5 local RC additions (2026-11-05)
 
 No host shares/network-isolation option or cloud backend is added. Explicit operator-only regular-file copies use additive `files` requests on the existing pinned channel (96-KiB chunks, 4-MiB files, rooted paths, exclusive publishing and end-to-end hashes). No archive extraction or new MCP host-file tools. Guest 0.5.0 advertises files; existing supported 0.3.5/0.2.0 guests keep their earlier operations without implicit upgrades. See [file transfer](file-transfer.md).

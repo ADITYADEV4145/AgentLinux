@@ -1,0 +1,12 @@
+<!-- SPDX-License-Identifier: Apache-2.0; original Agent Linux artwork. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
+  <defs>
+    <linearGradient id="sky" x2="1" y2="1"><stop stop-color="#14243b"/><stop offset="1" stop-color="#253f67"/></linearGradient>
+    <linearGradient id="hill" x2="0.8" y2="1"><stop stop-color="#416ba0"/><stop offset="1" stop-color="#233c60"/></linearGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1280v800H0z"/>
+  <path fill="url(#hill)" d="M0 620 380 200 730 610 1000 320 1280 600v200H0z"/>
+  <path fill="#172c48" d="m0 730 520-350 340 290 420-180v310H0z"/>
+  <path fill="#10243d" d="m0 780 720-210 560 170v60H0z"/>
+  <text x="1180" y="710" text-anchor="end" fill="#c6d8ee" font-family="sans-serif" font-size="24" letter-spacing="3">AGENT LINUX</text>
+</svg>

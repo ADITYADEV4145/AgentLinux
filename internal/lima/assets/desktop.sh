@@ -12,6 +12,9 @@ trap 'kill "$xpid" 2>/dev/null || true' EXIT INT TERM
 i=0
 until xdpyinfo >/dev/null 2>&1; do i=$((i+1)); [ "$i" -lt 100 ] || exit 1; sleep 0.1; done
 dbus-daemon --session --fork --address="$DBUS_SESSION_BUS_ADDRESS"
+if [ -x /usr/local/libexec/agent-linux-workstation ]; then
+ /usr/local/libexec/agent-linux-workstation
+fi
 xfconf-query -c xfwm4 -p /general/use_compositing -n -t bool -s false
 xfce4-session &
 session=$!

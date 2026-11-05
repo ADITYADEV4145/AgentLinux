@@ -1,6 +1,6 @@
 # ADR 0011: Ubuntu LTS / GNOME as the modern desktop target
 
-Date: 2026-11-05. Status: recommended target with a real Mac feasibility spike; production default switch is gated.
+Date: 2026-11-05. Status: superseded by [ADR 0012](0012-agent-workstation.md). The real Mac feasibility evidence remains valid; the GNOME-first recommendation is no longer current.
 
 Select Ubuntu 26.04.1 LTS ARM64 with Ubuntu GNOME 50 and a full application set, initially 4 CPUs/8 GiB/40 GiB. It offers a current cohesive desktop and longer maintenance window while reusing APT/systemd knowledge. Fedora Workstation 45/GNOME 51 is a strong current alternative, but adds shorter release qualification cycles and DNF/RPM/SELinux integration. Neither is a drop-in replacement for the existing X11 service.
 

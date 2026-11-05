@@ -73,6 +73,11 @@ chmod 0755 /usr/local/sbin/agent-linux-software
 # Own guest home directories; no host shares or credentials are introduced.
 install -d -m 0700 -o agent -g agent /home/agent/Desktop /home/agent/Documents /home/agent/Downloads /home/agent/Projects
 install -d /usr/local/libexec
+printf '%s' '` + base64.StdEncoding.EncodeToString([]byte(workstationScript)) + `' | base64 -d > /usr/local/libexec/agent-linux-workstation
+chmod 0755 /usr/local/libexec/agent-linux-workstation
+install -d /usr/local/share/backgrounds
+printf '%s' '` + base64.StdEncoding.EncodeToString([]byte(wallpaper)) + `' | base64 -d > /usr/local/share/backgrounds/agent-linux.svg
+chmod 0644 /usr/local/share/backgrounds/agent-linux.svg
 printf '%s' '` + base64.StdEncoding.EncodeToString([]byte(desktopScript)) + `' | base64 -d > /usr/local/libexec/agent-linux-desktop
 chmod 0755 /usr/local/libexec/agent-linux-desktop
 printf '%s' '` + base64.StdEncoding.EncodeToString([]byte(desktopUnit)) + `' | base64 -d > /etc/systemd/system/agent-linux-desktop.service

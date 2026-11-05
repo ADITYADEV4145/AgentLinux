@@ -1,6 +1,8 @@
-# Linux desktop and Phase 4 handoff
+# Linux workstation and desktop control
 
-Phase 3.5 keeps Debian 13 (trixie), ARM64, Xfce and one authenticated Xvfb X11 display. The dated base remains genericcloud 20261001-2618, checksum-pinned in [manifest](../images/debian/manifest.json). New machines use recipe `desktop-3.5.0`, helper 0.3.5 and guest protocol 2.0. Exact observed distribution point release, kernel, applications, timings and disk usage are recorded in [verification](verification.md); the base build date is not a claim that its packages stay current.
+Phase 5.5 keeps Debian 13 (trixie), ARM64, Xfce and one authenticated Xvfb X11 display. The dated base remains genericcloud 20261001-2618, checksum-pinned in [manifest](../images/debian/manifest.json). New machines use recipe `workstation-5.5.0`, helper 0.5.0 and guest protocol 2.0. Exact observed distribution point release, kernel, applications, timings and disk usage are recorded in [verification](verification.md); the base build date is not a claim that its packages stay current.
+
+[Phase 5.5 comparison and defaults](workstation.md) and [ADR 0012](decisions/0012-agent-workstation.md) supersede the earlier GNOME-first recommendation. New guest defaults are applied once; existing machines are not migrated.
 
 ## What existed and what changed
 
