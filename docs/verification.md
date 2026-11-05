@@ -2,6 +2,55 @@
 
 Phase 0 inspection: 2026-11-04. Phase 1 verification: 2026-11-05 (America/Chicago).
 
+## Phase 5 — Local hardening and unpublished developer RC (2026-11-05)
+
+**Local developer RC 0.5.0-rc.1 is implemented, with real installed-bundle/VM acceptance and explicit distribution limits.** Continued from clean pushed Phase 4 commit 236b15f (CI 42063417310 succeeded). This phase supersedes the earlier Phase 5 cloud plan. No release/tag/upload, paid resource, public deployment, global tool installation or shell-profile change was made.
+
+### Audit and implemented boundaries
+
+Audited effective Lima template validation, private environment/keys/SSH, systemd privileges, X11 clipboard/control, viewer listeners, guest protocol parsing, lifecycle locks/state and packaging. No host mounts/devices/clipboard/agent forwarding were added. Explicit NAT still permits possible host/LAN access; no untested offline/firewall mode is advertised. Same-user host processes/runtime/bootstrap trust and malicious-guest limits are documented in security.md, alongside official Lima plain/static-forwarding behavior. No independent security/penetration certification is claimed.
+
+Added operator-only copy-in/out: one regular file up to 4 MiB, 96-KiB chunks, guest-home confinement, fresh upload directories, checksum/size/order checks, symlink/hardlink/special-file rejection and atomic no-overwrite host output. Archives remain opaque; no host extraction, live share or new MCP filesystem tool. Guest helper 0.5.0 advertises files on additive protocol 2.0; old supported 0.3.5/0.2.0 operations remain accepted without disk upgrades.
+
+Added explicit stopped-machine reset/delete with exact machine ID, removal plan, intentional --yes, ownership/path checks, known-entry confinement and no forced shutdown. Same lock remains held through deletion/reset, with marker/lock inode preserved and interrupted deleting stage retained even through status. Reset downloads/verifies/reprovisions and rotates identity/keys; it is not a snapshot or byte-identical apt state. Only selected private state is cleaned.
+
+Added version reporting, sibling-helper diagnostics, stderr download/stage/heartbeat progress, normalized local host/helper/docs/notices packaging, dependency inventory, offline manifest installer, atomic activation, separate tool uninstall, contribution/security/issue guidance and a concise README path. Packaging selects repository notice/docs files rather than sweeping ignored local files, and rejects linked/outside inputs. No remote executable fetcher or fabricated publisher authenticity. Apple codesign reported **Signature=adhoc, TeamIdentifier=not set** on the tested Go-built CLI; no Developer ID signing or notarization is configured/performed.
+
+### Automated verification and real Mac workflow
+
+`make build test check` passed: both binaries, all race-enabled Go tests, five Python installer/packaging tests, vet and whitespace. Meaningful new coverage includes unsafe paths, links/special/oversized/empty files, ordering/checksum/cancellation and malformed guest chunks, partial-output removal, wrong-ID/running-machine/unexpected-entry deletion refusal, confined cleanup, reset identity, interrupted deletion/status, unowned/missing-state rejection, installed launcher discovery, bundle tampering, manifest traversal, failed activation preserving current, symlinked package inputs, permissions/unexpected-data uninstall refusal. Existing protocol/stale-state/timeout/restart/PNG/host-config tests remain. Unit doubles are not VM evidence. Linux CI adds cross-build and unpublished local bundle/manifest checks; it cannot boot VZ.
+
+Host: ARM64 macOS 26.5 (25F71), 12 logical CPUs/24 GiB RAM, Go 1.26.1, Python 3.12, external reviewed Lima 2.2.1. This is the **existing developer Mac**, not a clean Mac/user account. Used a fresh private tools prefix and fresh disposable 2-vCPU/4-GiB/24-GiB Debian 13 ARM64 machine, pinned 20261001-2618 base, desktop-3.5.0 recipe, actual hello guest 0.5.0/protocol 2.0, real Xfce/Xvfb. A new kernel/point-release inventory was not captured here; earlier Debian 13.7/kernel observations remain separate historical evidence.
+
+1. Built a private explicitly dirty development bundle, installed without sudo/network/shell edits and invoked its launcher. First doctor exposed a real symlink/helper-discovery failure; fixed discovery to the actual immutable executable directory, added a regression test, rebuilt/reinstalled, and doctor then passed.
+2. Installed CLI downloaded and SHA-512-verified **337,510,400 bytes (~322 MiB)**, provisioned a new guest, and emitted ready only after actual service/desktop handshake. Observed progress/heartbeat on stderr; JSON stdout stayed parseable.
+3. Copied **432,000 UTF-8 bytes** in/out across multiple chunks and compared exact bytes. Overwrite, host symlink, guest symlink and traversal attempts failed. Source and a separate unrelated sentinel remained unchanged. Captured a real guest PNG. Guest audit reported **UID 1001, groups [1001], sudo exit 1**, no virtiofs/9p/Users mounts, and only the fixed guest environment keys (no host secret/proxy environment).
+4. Real official MCP Go SDK v1.8.0 stdio client exercised the installed binary and guest. Live fallback in isolated headless **Chrome 156.0.8078.80** visibly showed the MCP-controlled Chromium UTF-8 page. Token/Origin/Host rejection, pause and fragment removal passed. Viewer exit left VM ready. Kitty visual testing was not repeated in Phase 5; its actual Phase 4 evidence remains valid for that renderer.
+5. Delete preview without --yes, wrong ID and running-machine deletion were refused. Stop/up retained the original machine ID and guest marker. Reset returned a new ID/real ready guest; the marker was gone. Explicit stopped-machine deletion left **only marker + lock**, with VM disk/config/cache/keys removed. No user default VM was controlled.
+6. Real tools-only uninstall removed launchers/releases and left VM namespace marker/lock unchanged, retaining only the tools marker/lock. Original development bundle was restored solely for the final clean-commit upgrade check. Unit failure injection separately verified tampered/copy/activation failures do not switch current.
+7. After the full VM run, code review tightened interruption recovery and plan entry reporting. A **synthetic interrupted-state fixture using the actual CLI and absent runtime**, not a simulated real runtime failure, verified status preserves deleting/absent, up refuses resume, and explicit selected-ID deletion finishes cleanup. Additional reset-input/symlink and reserved upload-name guards are automated checks; the full provision/copy/MCP/reset run was not repeated for those small guard changes.
+
+Private evidence is ignored under artifacts/phase5: installed first-run failure/success, setup progress, acceptance1 reports/images, isolation audit, signing observation, interrupted-state check and uninstall observation. The successful real guest/browser PNGs were inspected. The reusable scripts/rc_acceptance.py requires an explicitly named disposable fixture and machine ID; --reset/--delete intentionally authorize that fixture's destruction. It never creates a VM or chooses a personal/default state directory. No model-based agent acceptance was repeated (official SDK was real); earlier Codex evidence is separate.
+
+| Operation | Observed elapsed time on this Mac/network |
+| --- | --- |
+| Fresh download + provisioning + real ready | 192.923 s |
+| 432,000-byte copy-in / copy-out | 2.815 s / 2.386 s |
+| Stop / persistent restart to ready | 3.866 s / 8.783 s |
+| Full clean reset to new ready guest | 163.864 s |
+| Selected stopped-VM deletion | 0.813 s |
+| Tools-only uninstall | 0.072 s |
+
+These are single-run hardware/network-specific wall times, not performance guarantees. Default preflight requires 30 GiB free (24-GiB logical disk plus 6-GiB conversion/headroom); sparse physical usage grows and was not independently benchmarked. Apt packages/repos can change, so provisioning is recipe-repeatable, not disk-byte reproducible.
+
+### Reproducibility, final artifact check and limits
+
+Two independent private development packages at the same review checkpoint produced **byte-identical 5,201,917-byte archives** (repro-check.json); both were honestly marked dirty and included the embedded base commit. Packaging/notices guards and final docs were subsequently refined. The clean committed-source build, repeated archive comparison, previous-development-prefix upgrade, doctor/version and tools-only uninstall are the final local artifact check, recorded separately in artifacts/phase5/final-check.json; no artifact is uploaded. A manifest hash validates local integrity, not publisher authenticity through a compromised common channel. The documented current authenticity path is reviewed/pinned source and local build; an authenticated binary release process is future work.
+
+No clean-Mac/quarantined-download/Gatekeeper acceptance, full offline host startup, network-isolation enforcement, broader terminal/Mac matrix, independent security review, formal complete SBOM/image redistribution clearance or monitored private-report SLA is claimed. Private reporting API lookup returned 404, so availability is unestablished; SECURITY.md provides a no-sensitive-details fallback and calls out the owner task. The precise clean-Mac prerequisite → install → doctor → boot → MCP/view → copy/persistence/reset/delete → uninstall checklist is in troubleshooting.md.
+
+**Exit verdict:** functioning local developer RC path, explicit trust/limitation docs and guarded destructive operations are present and tested at the stated scope. Wider binary distribution remains a separate decision. Original code stays Apache-2.0; exact module notices/inventory accompany local artifacts, with no bundled Lima/Kitty/browser/image. Commit under the owner identity, no AI attribution/private evidence/secrets, and create no public release.
+
 ## Phase 4 completion — 2026-11-05 (current)
 
 **Phase 4 passed on the tested Mac/Kitty configuration.** Continued from pushed commit 3191b65 (CI run 42012902307 succeeded). The unlocked Mac permitted actual graphics inspection: scoped native capture and Kitty screenshots visibly showed the Linux Xfce desktop, not just a LIVE label. The failed locked-display attempt below remains historical evidence.

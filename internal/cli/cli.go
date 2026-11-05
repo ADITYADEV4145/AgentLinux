@@ -15,9 +15,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
+	"github.com/ADITYADEV4145/AgentLinux/internal/buildinfo"
 	"github.com/ADITYADEV4145/AgentLinux/internal/config"
 	"github.com/ADITYADEV4145/AgentLinux/internal/host"
 	"github.com/ADITYADEV4145/AgentLinux/internal/lifecycle"
@@ -26,7 +28,7 @@ import (
 	"github.com/ADITYADEV4145/AgentLinux/internal/storage"
 )
 
-const Help = `agent-linux: an agent-ready Linux machine (development build)
+const Help = `agent-linux: an agent-ready Linux machine (local developer release candidate)
 
 Usage: agent-linux COMMAND [options]
   doctor          Read-only host, runtime and resource diagnostics
@@ -34,6 +36,9 @@ Usage: agent-linux COMMAND [options]
   status          Reconcile runtime state and check the actual guest service
   stop            Request graceful shutdown and confirm runtime stopped
   logs            Show bounded, sanitized lifecycle or backend diagnostics
+  version         Report release, commit, guest and protocol versions
+  copy-in/out     Explicit bounded one-way regular-file transfers
+  delete/reset    Guarded destructive actions; require selected machine ID
 
 Use COMMAND --help for options. Cloud is not implemented.
   view            Live view-only desktop: Kitty graphics or secure loopback web
@@ -87,8 +92,7 @@ func Parse(args []string, help io.Writer) (Options, error) {
 		f.StringVar(&o.Spec.Network, "network", "", "creation only: explicitly choose nat (host/LAN reachable)")
 		f.StringVar(&o.Spec.Image, "image", o.Spec.Image, "creation only: reviewed default URL or absolute local cloud image")
 		f.StringVar(&o.Spec.Digest, "image-sha512", o.Spec.Digest, "creation only: trusted image SHA-512 (required for custom local image)")
-		ex, _ := os.Executable()
-		f.StringVar(&o.Spec.GuestBinary, "guest-binary", filepath.Join(filepath.Dir(ex), "agent-linux-guest"), "creation only: static Linux ARM64 guest helper")
+		f.StringVar(&o.Spec.GuestBinary, "guest-binary", defaultGuestBinary(), "creation only: static Linux ARM64 guest helper")
 	}
 	if o.Command == "screenshot" {
 		f.StringVar(&o.Output, "output", "", "new PNG output path; existing files are never overwritten")
@@ -255,6 +259,20 @@ type Envelope struct {
 }
 
 func Run(ctx context.Context, args []string, out, errout io.Writer) int {
+	if len(args) > 0 && (args[0] == "delete" || args[0] == "reset") {
+		return runDestructive(ctx, args, out, errout)
+	}
+	if len(args) > 0 && (args[0] == "copy-in" || args[0] == "copy-out") {
+		return runFiles(ctx, args, out, errout)
+	}
+	if len(args) > 0 && args[0] == "version" {
+		if len(args) > 2 || (len(args) == 2 && args[1] != "--json") {
+			fmt.Fprintln(errout, "usage: agent-linux version [--json]")
+			return 1
+		}
+		json.NewEncoder(out).Encode(map[string]string{"version": buildinfo.Version, "commit": buildinfo.Commit, "guest": protocol.GuestVersion, "protocol": protocol.Version, "lima": config.LimaVersion})
+		return 0
+	}
 	if len(args) > 0 && args[0] == "view" {
 		return runView(ctx, args[1:], out, errout)
 	}
@@ -310,6 +328,10 @@ func Run(ctx context.Context, args []string, out, errout io.Writer) int {
 	}
 	if o.Command == "doctor" {
 		r := host.Inspect(o.Root, o.Lima)
+		if _, err := lima.CheckBinary(defaultGuestBinary()); err != nil {
+			r.Problems = append(r.Problems, "guest helper missing/invalid beside CLI; reinstall the complete bundle or run make build")
+			r.Capabilities = []string{}
+		}
 		if len(r.Problems) > 0 {
 			if o.JSON {
 				_ = json.NewEncoder(out).Encode(Envelope{Result: r, Error: &protocol.Failure{Code: "PREREQUISITES_MISSING", Message: strings.Join(r.Problems, "; ")}})
@@ -364,10 +386,36 @@ func Run(ctx context.Context, args []string, out, errout io.Writer) int {
 	if e != nil {
 		return fail(e, nil)
 	}
+	var progressMu sync.Mutex
+	progress := func(s string) { progressMu.Lock(); defer progressMu.Unlock(); fmt.Fprintln(errout, "agent-linux:", s) }
 	backend := &lima.Backend{Root: root, Executable: executable}
+	if o.Command == "up" {
+		backend.Progress = progress
+	}
 	c := lifecycle.Controller{Root: root, Backend: backend, Preflight: func(s config.Spec, newDisk bool) error { return host.Inspect(root, executable).Validate(s, newDisk) }}
 	ctx, cancel := context.WithTimeout(ctx, o.Timeout)
 	defer cancel()
+	if o.Command == "up" {
+		c.Progress = progress
+		done := make(chan struct{})
+		workerDone := make(chan struct{})
+		defer func() { close(done); <-workerDone }()
+		go func() {
+			defer close(workerDone)
+			ticker := time.NewTicker(15 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-done:
+					return
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					progress(fmt.Sprint("setup is still running; package provisioning can take several minutes (deadline ", o.Timeout, ")"))
+				}
+			}
+		}()
+	}
 	local := machine.Local{Controller: &c}
 	switch o.Command {
 	case "screenshot":
@@ -470,3 +518,13 @@ func safeGuestText(data []byte) string {
 	}
 	return b.String()
 }
+
+// Install launchers/current are symlinks; discover the helper beside the actual
+// host binary in its immutable version directory, never beside the launcher.
+func siblingGuest(executable string) string {
+	if resolved, e := filepath.EvalSymlinks(executable); e == nil {
+		executable = resolved
+	}
+	return filepath.Join(filepath.Dir(executable), "agent-linux-guest")
+}
+func defaultGuestBinary() string { ex, _ := os.Executable(); return siblingGuest(ex) }

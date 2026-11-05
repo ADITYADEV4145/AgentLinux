@@ -23,7 +23,10 @@ import (
 	"time"
 )
 
-type Backend struct{ Root, Executable string }
+type Backend struct {
+	Root, Executable string
+	Progress         func(string)
+}
 
 func (b *Backend) home() string { return filepath.Join(b.Root, "lima") }
 func (b *Backend) env() []string {
@@ -295,7 +298,11 @@ func (b *Backend) obtainImage(ctx context.Context, s config.Spec) (string, error
 			if res.StatusCode != 200 {
 				return "", fmt.Errorf("pinned image unavailable (HTTP %d); select a reviewed image, no daily fallback", res.StatusCode)
 			}
-			n, e := io.Copy(tmp, io.LimitReader(res.Body, (4<<30)+1))
+			if b.Progress != nil {
+				b.Progress(fmt.Sprintf("downloading pinned Debian image (%d content-length bytes; -1 means unknown); verifying SHA-512 before use", res.ContentLength))
+			}
+			reader := &downloadProgress{r: res.Body, report: b.Progress, last: time.Now()}
+			n, e := io.Copy(tmp, io.LimitReader(reader, (4<<30)+1))
 			if e != nil {
 				return "", e
 			}
@@ -527,4 +534,27 @@ func (b *Backend) Call(ctx context.Context, s lifecycle.State, q protocol.Reques
 		return nil, protocol.Fail("NOT_READY", "local VM is not running")
 	}
 	return b.exchangeCall(ctx, s, o, &q)
+}
+
+// Delete is called only after the controller confirms a stopped, identity-selected VM.
+func (b *Backend) Delete(ctx context.Context) error {
+	_, e := b.run(ctx, "delete", "--force", "default")
+	return e
+}
+
+type downloadProgress struct {
+	r      io.Reader
+	report func(string)
+	n      int64
+	last   time.Time
+}
+
+func (p *downloadProgress) Read(b []byte) (int, error) {
+	n, e := p.r.Read(b)
+	p.n += int64(n)
+	if p.report != nil && (time.Since(p.last) > 2*time.Second || e == io.EOF) {
+		p.report(fmt.Sprintf("downloaded %.1f MiB; setup is still in progress", float64(p.n)/(1<<20)))
+		p.last = time.Now()
+	}
+	return n, e
 }

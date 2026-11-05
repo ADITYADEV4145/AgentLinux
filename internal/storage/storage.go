@@ -177,3 +177,45 @@ func LockWait(ctx context.Context, root string, limit time.Duration) (func(), er
 		}
 	}
 }
+
+// ExistingRoot never creates or adopts a path. Destructive/copy operations require
+// an existing, private application namespace and its exact regular ownership marker.
+func ExistingRoot(path string) (string, error) {
+	if !filepath.IsAbs(path) || filepath.Clean(path) != path || path == "/" {
+		return "", errors.New("expected existing absolute application state path")
+	}
+	home, _ := os.UserHomeDir()
+	if path == home {
+		return "", errors.New("refusing home directory")
+	}
+	for p := path; p != "/"; p = filepath.Dir(p) {
+		st, e := os.Lstat(p)
+		if e != nil {
+			return "", e
+		}
+		if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
+			return "", errors.New("state path contains symlink or non-directory")
+		}
+	}
+	st, e := os.Stat(path)
+	if e != nil {
+		return "", e
+	}
+	if st.Mode().Perm()&0077 != 0 {
+		return "", errors.New("state directory must be private (0700)")
+	}
+	if v, ok := st.Sys().(*syscall.Stat_t); ok && int(v.Uid) != os.Getuid() {
+		return "", errors.New("state belongs to another user")
+	}
+	if e = SafeFile(path, ".agent-linux-owner"); e != nil {
+		return "", e
+	}
+	b, e := os.ReadFile(filepath.Join(path, ".agent-linux-owner"))
+	if e != nil {
+		return "", e
+	}
+	if string(b) != "agent-linux state v1\n" {
+		return "", errors.New("invalid application ownership marker")
+	}
+	return path, nil
+}

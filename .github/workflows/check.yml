@@ -16,3 +16,7 @@ jobs:
       - run: make test check
       - run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags='-s -w' -o bin/agent-linux-guest ./cmd/agent-linux-guest
       - run: CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -o bin/agent-linux ./cmd/agent-linux
+      - name: Build unpublished unsigned local candidate (no upload)
+        run: |
+          python3 scripts/package.py --output artifacts/ci-package
+          python3 -c "import sys; from pathlib import Path; sys.path.insert(0, 'scripts'); import install; install.manifest(Path('artifacts/ci-package/agent-linux-0.5.0-rc.1-darwin-arm64').resolve())"

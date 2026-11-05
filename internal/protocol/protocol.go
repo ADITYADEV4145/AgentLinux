@@ -16,7 +16,7 @@ import (
 )
 
 const Version = "2.0"
-const GuestVersion = "0.3.5"
+const GuestVersion = "0.5.0"
 const MaxFrame = 16 << 20
 const MaxRequest = 256 << 10
 const MaxPNG = 8 << 20
@@ -31,6 +31,7 @@ type Request struct {
 	Input     *Input       `json:"input,omitempty"`
 	Exec      *ExecRequest `json:"exec,omitempty"`
 	App       string       `json:"app,omitempty"`
+	File      *FileRequest `json:"file,omitempty"`
 }
 type Failure struct {
 	Code    string `json:"code"`
@@ -56,6 +57,7 @@ type Info struct {
 	Frame        *Frame         `json:"frame,omitempty"`
 	Execution    *Execution     `json:"execution,omitempty"`
 	InputResult  *InputResult   `json:"inputResult,omitempty"`
+	File         *FileResult    `json:"file,omitempty"`
 }
 type Response struct {
 	Version string   `json:"version"`
@@ -177,4 +179,4 @@ func WriteRequest(w io.Writer, q Request) error {
 }
 
 // Phase 3.5 extends launch targets without changing the v2 wire contract.
-func CompatibleGuestVersion(v string) bool { return v == GuestVersion || v == "0.2.0" }
+func CompatibleGuestVersion(v string) bool { return v == GuestVersion || v == "0.3.5" || v == "0.2.0" }

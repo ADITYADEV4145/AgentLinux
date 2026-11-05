@@ -1,6 +1,6 @@
 # Guest computer protocol 2.0
 
-Service version **0.3.5**, Linux ARM64. The host also accepts legacy service 0.2.0 on the same protocol 2.0; newer launch targets and readiness checks require the new helper. This is the implemented internal protocol, not MCP. Version 1.0 guests fail explicitly; there is no silent fallback, implicit disk replacement or automatic migration. Preserve a Phase 1 machine and use a fresh `--state-dir` for Phase 2. New CLI `stop` can still stop a valid old runtime without a guest handshake.
+Service version **0.5.0**, Linux ARM64. The host also accepts legacy services 0.3.5 and 0.2.0 on the same protocol 2.0; newer launch targets and readiness checks require the new helper. This is the implemented internal protocol, not MCP. Version 1.0 guests fail explicitly; there is no silent fallback, implicit disk replacement or automatic migration. Preserve a Phase 1 machine and use a fresh `--state-dir` for Phase 2. New CLI `stop` can still stop a valid old runtime without a guest handshake.
 
 ## Channel, readiness and capabilities
 
@@ -44,3 +44,10 @@ This is lifecycle cleanup, not a new security sandbox or rollback mechanism: com
 
 
 Phase 3.5 explicit package maintenance uses a separate host-operator Lima guest-admin path, not this non-sudo protocol/MCP exec path. See development.md for the bounded guest root unit, package-name validation, update policy and uncertain-disconnect behavior. The common desktop interface and its guest privilege level are unchanged.
+
+
+## Explicit operator file copies (0.5.0)
+
+Additive `files` operation, advertised in `operations`; no protocol-number change or automatic upgrade of an existing guest. Requests contain a `file` object: action begin/write/commit/abort (random transferId, name, offset, size, SHA256, base64 data) or stat/read (relative guest-home path, offset). Results contain `file` with size/hash/path/data as appropriate. Same hello/session/framing rules, same pinned forced-command channel, no SCP or new listener. Older helpers reject the operation visibly.
+
+Writes are serialized by the guest file adapter, at most 96 KiB per chunk/4 MiB per file. Uploads use exclusive unique directories under guest /home/agent/Transfers; commit verifies exact size/hash and refuses replacement. Downloads read only bounded regular files under guest home; the host validates metadata/chunk size/full hash and publishes only to its explicit new output. Neither direction extracts archive entries or interprets host paths supplied by the guest. Details, interrupted-upload limits and trust assumptions are in [file-transfer.md](file-transfer.md). This operator CLI surface is separate from the minimal common computer/MCP tool interface.

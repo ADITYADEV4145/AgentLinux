@@ -2,6 +2,12 @@
 
 Phase 0 • 2026-11-04 • Decisions below specify intended implementation. The Phase 0 design below is retained as the target architecture; current implementation and hardware evidence are distinguished in the snapshot below. Research facts and links are in [research.md](research.md); experiments and evidence are in [verification.md](verification.md).
 
+## Phase 5 local RC additions (2026-11-05)
+
+No host shares/network-isolation option or cloud backend is added. Explicit operator-only regular-file copies use additive `files` requests on the existing pinned channel (96-KiB chunks, 4-MiB files, rooted paths, exclusive publishing and end-to-end hashes). No archive extraction or new MCP host-file tools. Guest 0.5.0 advertises files; existing supported 0.3.5/0.2.0 guests keep their earlier operations without implicit upgrades. See [file transfer](file-transfer.md).
+
+Reset/delete retain the same lifecycle lock while checking the selected ID, stopped runtime and owned namespace, confirming deletion, cleaning confined known paths and optionally provisioning a new identity. The `deleting` stage preserves interruption recovery; lock/marker survive to avoid replacing the lock inode. Default disks remain persistent. Offline user-owned tool bundles activate with an atomic version symlink; tools uninstall is separate from guest data deletion. No publisher signing/notarization or remote binary authenticity is claimed. [Isolation audit](security.md), [release contract](release.md), [verification](verification.md).
+
 ## Phase 4 implementation snapshot (2026-11-05)
 
 A view-only Go consumer renders the common guest PNG source through Kitty's direct graphics protocol or a secure live loopback web fallback. One synchronous capture/cache, bounded output/network requests, hash/ETag suppression, static-frame backoff and no background web worker limit work. Actual terminal pixel/cell dimensions determine aspect-aware placement; raw/alternate-screen/cursor state is unwound on exit. No viewer input or implicit VM lifecycle action exists. Guest calls get a bounded two-second lock wait so capture and MCP can serialize.

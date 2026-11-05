@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -49,5 +51,20 @@ func TestComputerArguments(t *testing.T) {
 	}
 	if out := safeGuestText([]byte("hello\x1b]52;c;attack\a")); strings.ContainsRune(out, '\x1b') || strings.ContainsRune(out, '\a') {
 		t.Fatal("guest output can invoke host clipboard")
+	}
+}
+
+func TestInstalledLauncherFindsVersionedGuest(t *testing.T) {
+	root, _ := filepath.EvalSymlinks(t.TempDir())
+	version := filepath.Join(root, "releases", "version", "bin")
+	if e := os.MkdirAll(version, 0700); e != nil {
+		t.Fatal(e)
+	}
+	real := filepath.Join(version, "agent-linux")
+	os.WriteFile(real, []byte("fixture"), 0700)
+	link := filepath.Join(root, "agent-linux")
+	os.Symlink(real, link)
+	if got := siblingGuest(link); got != filepath.Join(version, "agent-linux-guest") {
+		t.Fatal("launcher helper discovery", got)
 	}
 }

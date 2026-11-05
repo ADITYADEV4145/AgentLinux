@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/ADITYADEV4145/AgentLinux/internal/desktop"
+	"github.com/ADITYADEV4145/AgentLinux/internal/filetransfer"
 	"github.com/ADITYADEV4145/AgentLinux/internal/guestexec"
 	"io"
 	"net"
@@ -25,6 +26,7 @@ type Service struct {
 	MachineID, SessionID, BootID string
 	idleTimeout                  time.Duration
 	Desktop                      *desktop.Desktop
+	Files                        *filetransfer.Guest
 }
 
 func New(machine string) (*Service, error) {
@@ -35,11 +37,11 @@ func New(machine string) (*Service, error) {
 	if e != nil {
 		return nil, e
 	}
-	return &Service{MachineID: machine, SessionID: protocol.ID(), BootID: strings.TrimSpace(string(b)), Desktop: desktop.New()}, nil
+	return &Service{MachineID: machine, SessionID: protocol.ID(), BootID: strings.TrimSpace(string(b)), Desktop: desktop.New(), Files: &filetransfer.Guest{Home: "/home/agent"}}, nil
 }
 func (s *Service) info() *protocol.Info {
 	u, _ := os.ReadFile("/proc/uptime")
-	return &protocol.Info{GuestVersion: protocol.GuestVersion, Protocol: protocol.Version, MachineID: s.MachineID, SessionID: s.SessionID, BootID: s.BootID, OS: runtime.GOOS, Arch: runtime.GOARCH, Uptime: strings.TrimSpace(string(u)), Operations: []string{"health", "probe", "screenshot", "input", "exec", "open"}, Capabilities: protocol.SupportedCapabilities()}
+	return &protocol.Info{GuestVersion: protocol.GuestVersion, Protocol: protocol.Version, MachineID: s.MachineID, SessionID: s.SessionID, BootID: s.BootID, OS: runtime.GOOS, Arch: runtime.GOARCH, Uptime: strings.TrimSpace(string(u)), Operations: []string{"health", "probe", "screenshot", "input", "exec", "open", "files"}, Capabilities: protocol.SupportedCapabilities()}
 }
 func (s *Service) Handle(c net.Conn) {
 	defer c.Close()
@@ -120,6 +122,12 @@ func (s *Service) Handle(c net.Conn) {
 			p.Result = s.info()
 			var e error
 			switch q.Method {
+			case "files":
+				if s.Files == nil || q.File == nil {
+					e = protocol.Fail("UNSUPPORTED_OPERATION", "file service unavailable; create a new guest for file transfer")
+				} else {
+					p.Result.File, e = s.Files.Handle(*q.File)
+				}
 			case "exec":
 				if q.Exec == nil {
 					e = protocol.Fail("INVALID_ARGUMENT", "exec parameters required")

@@ -38,7 +38,11 @@ Implemented Kitty direct PNG rendering, active query/real pixel sizing, raw term
 
 Future work: optional human input with ownership/takeover, measured optimizations, broad terminal/host support matrix, and distributor signature/installer/SBOM hardening. No fixed-FPS or production-ready claim. No release publication without authorization.
 
-## Phase 5 — Managed cloud pilot (not started)
+## Phase 5 — Local hardening and developer release candidate (complete at tested developer scope)
+
+The user's Phase 5 scope is local product hardening, superseding the earlier planned cloud phase. Implemented an explicit isolation/trust audit, bounded one-way file copies, stopped-machine identity/confirmation guards for reset/deletion, private offline bundle installation/atomic activation/uninstall, versioning, original/third-party notices, contribution/security guidance and a first-run/troubleshooting matrix. Real installed-bundle guest copy/MCP/view/persistence/reset/delete and tools uninstall passed; packages were built locally with no release/tag publication or cloud allocation. Automated boundary tests and actual timings are recorded. Clean-Mac/Gatekeeper acceptance, wider authenticity/signing/reporting infrastructure and full image distribution review remain explicit future gates. See release.md and verification.md for exact results and limits.
+
+## Future managed cloud pilot (not started)
 
 No-cost provider/license/contract review first. Evaluate one fixed region/provider for real isolation, auth, quotas, private viewing, persistent/ephemeral profiles, TTL, cleanup and metering. Only allocate paid resources after explicit authorization. Local/cloud operations share logical contracts with capability differences; no fake cloud implementation or silent local fallback. Cross-workspace denial, ambiguous allocation, orphan cleanup and storage retention must be tested before public use. Billing activation remains separate.
 
@@ -46,4 +50,4 @@ No-cost provider/license/contract review first. Evaluate one fixed region/provid
 
 NAT reaches host/LAN; offline/egress-restricted modes are not validated. Lima bootstrap management SSH is trusted and weaker than application pinning. Provisioning data retains guest host-key material in private state. Detached image signatures and broad host compatibility are unverified. MCP, desktop/control and a live view-only viewer are implemented. Stronger hostile-guest security, distribution compliance and performance claims require further evidence.
 
-Next action: choose the next scope explicitly; optional human input needs an ownership design, and any cloud pilot begins with provider/license review before infrastructure allocation. End every phase with actual outcome, key files, commands, automated/hardware/skipped verification, limits, git status/commit, exit verdict and exact next action.
+Next action: before wider binary distribution, run the clean-Mac checklist, establish a monitored private reporting channel and choose an authenticated release/signing process. Optional human input needs an ownership design; any cloud pilot starts only under separately chosen scope. End every phase with actual outcome, key files, commands, automated/hardware/skipped verification, limits, git status/commit, exit verdict and exact next action.

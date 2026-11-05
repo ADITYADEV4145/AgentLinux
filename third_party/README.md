@@ -9,7 +9,7 @@ Original AgentLinux code is Apache-2.0 (root LICENSE). No terminal-mac, vmette, 
 - OpenSSH is supplied by the host and guest OS, with its own component licenses.
 - Debian image packages retain their individual licenses; the image is downloaded at runtime, not committed or redistributed here. A redistribution review and corresponding-source obligations remain necessary before publishing a guest image.
 
-The local build currently produces development binaries only, not a cleared release package. License copies here are notices, not an assertion that a future binary/image bundle has passed a complete license audit.
+The local build now produces an unpublished developer RC bundle with linked dependency inventory and these notices; it is not a cleared redistributed VM/runtime image. License copies here are notices, not an assertion that a future binary/image bundle has passed a complete license audit.
 
 
 Phase 2's guest package recipe installs Xvfb/Xorg (component X11/MIT-style notices), Xfce (component GPL/LGPL), Mousepad (GPL), Chromium (BSD-style core plus extensive third-party notices), xdotool (BSD-style), xclip (GPLv2), scrot (MIT-feh acknowledgement terms), and Noto/DejaVu fonts (font-specific licenses). The screenshot adapter uses scrot. Review exact Debian `/usr/share/doc/<package>/copyright` and source obligations before redistributing an image. The recipe/runtime installation is not a statement that a bundled image has distribution clearance. No new Go dependency was added for desktop or cgroup control.
@@ -31,10 +31,13 @@ MCP integration adds the pinned modules below. Exact upstream LICENSE/NOTICE fil
 | golang.org/x/sys | v0.41.0 | BSD-3-Clause |
 | golang.org/x/time | v0.15.0 | BSD-3-Clause |
 
-Some SDK modules in go.sum are upstream/test dependencies, not necessarily linked into our binaries. No SDK HTTP/OAuth listener is enabled by this stdio adapter. A release still needs a generated linked dependency/SBOM review and complete runtime/image notice audit; these development license copies are not distribution clearance.
+Some SDK modules in go.sum are upstream/test dependencies, not necessarily linked into our binaries. No SDK HTTP/OAuth listener is enabled by this stdio adapter. Phase 5 generates linked dependency inventory in DEPENDENCIES.txt and retains the exact notices; that inventory is not a complete formal SBOM or clearance to redistribute a VM/runtime image. Full runtime/image compliance still requires separate review.
 
 
 Phase 3.5 adds Debian Firefox ESR (MPL-2.0 core and other components/trademark terms), GVFS/tumbler/accessibility/Xfce utilities (package-specific GPL/LGPL and other notices), Git (GPL-2.0), OpenSSH (component BSD-style/permissive), curl (curl license), Python (PSF plus components), Bash (GPL), Nano (GPL), and their dependencies through apt. Optional Node.js/npm and build profiles add MIT/BSD/GPL and other package-specific terms; they are not bundled by this repository. No new Go module dependency was introduced. Google Chrome and Microsoft Edge are proprietary optional vendor products, not included or rebranded; vendor redistribution/installer terms need separate review. Exact `/usr/share/doc/PACKAGE/copyright`, source offers and aggregate image obligations must be audited before a distributed image/release. None is published by this phase.
 
 
 Phase 4 adds `golang.org/x/term` v0.40.0 (BSD-3-Clause; exact x-term.LICENSE retained), reusing pinned x/sys v0.41.0. Kitty 0.50.0 is an external GPL-3.0 terminal used from an ignored local test download, not bundled or linked into the core; bundling it would need its own full distribution review/notices/source compliance. The local fallback uses Go net/http and static original HTML/CSS/JS, no web runtime dependency. Browser acceptance optionally imports externally installed test-only websocket-client 1.9.0; it is not a shipped Go/runtime dependency. No Kitty source/assets were copied into the product.
+
+
+Phase 5 adds only original Go/Python code using the standard libraries and existing pinned modules. The local package contains our CLI/helper, documentation, Go module/build dependency inventory and retained licenses. It excludes Lima, Kitty, Debian disks, installed guest packages, test browser binaries and the Go compiler. The original copyright/license notice must accompany redistribution; do not remove mixed upstream notices. Python/Pillow/websocket/ffmpeg remain optional externally installed acceptance tools, not product components. A broader formal SPDX/CycloneDX and source-obligation audit remains before image/runtime bundling. No such image or binary release is published here.

@@ -1,0 +1,9 @@
+# Security reporting
+
+This is an early development release candidate. No version has a production-security guarantee or formal support/SLA. Read [the actual trust boundaries](docs/security.md) before running untrusted guest tasks. Supported development target: the current local RC; older guests are accepted only for the explicitly documented compatible operations.
+
+Please do not put vulnerabilities, credentials, private machine state, VM images, screen contents or exploit details in public issues. Use the repository's [private vulnerability report form](https://github.com/ADITYADEV4145/AgentLinux/security/advisories/new) **if GitHub makes it available**. Private reporting availability was not established by the Phase 5 API check; we have not enabled settings or invented a monitored security email address. If unavailable, open only a minimal public request asking the repository owner for a private contact channel, with no affected secrets/exploit details, and wait for the owner to provide one. Establishing a durable monitored private channel remains an owner task before broader binary distribution.
+
+A private report should include the source commit/tool/guest/runtime/host versions, the affected trust boundary, minimal reproduction in an isolated disposable VM, expected/actual behavior and sanitized evidence. Do not target third-party services or unrelated LAN devices. There is no bounty, response-time promise or permission for destructive testing of others' machines.
+
+Repository maintainers should acknowledge reports, reproduce safely, assess affected versions, coordinate a fix/disclosure and credit reporters only with consent. GitHub's [private-reporting documentation](https://docs.github.com/code-security/security-advisories/guidance-on-reporting-and-writing/privately-reporting-a-security-vulnerability) explains availability and the reporting flow. No external report or message is sent by this repository's tooling.

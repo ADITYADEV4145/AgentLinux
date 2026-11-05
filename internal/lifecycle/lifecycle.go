@@ -43,6 +43,7 @@ type Controller struct {
 	Root      string
 	Backend   Backend
 	Preflight func(config.Spec, bool) error
+	Progress  func(string)
 }
 
 func (c *Controller) load() (State, error) {
@@ -58,13 +59,16 @@ func (c *Controller) load() (State, error) {
 		return s, errors.New("invalid stored state schema/identity; do not delete disks, inspect state backup")
 	}
 	switch s.State {
-	case "creating", "starting", "ready", "stopping", "stopped", "error":
+	case "creating", "starting", "ready", "stopping", "stopped", "error", "deleting":
 	default:
 		return s, errors.New("invalid stored lifecycle state")
 	}
 	return s, nil
 }
 func (c *Controller) save(s *State) error {
+	if c.Progress != nil {
+		c.Progress(s.State + ": " + s.Stage)
+	}
 	s.UpdatedAt = time.Now().UTC()
 	if e := storage.JSON(c.Root, "state.json", s); e != nil {
 		return e
@@ -92,7 +96,9 @@ func (c *Controller) fail(s *State, err error) (State, error) {
 	if !protocol.ValidID(s.MachineID) {
 		return *s, err
 	}
-	s.State = "error"
+	if s.State != "deleting" {
+		s.State = "error"
+	}
 	s.Guest = nil
 	s.LastError = "BACKEND_OPERATION_FAILED"
 	if errors.Is(err, context.Canceled) {
@@ -113,9 +119,15 @@ func (c *Controller) Up(ctx context.Context, spec config.Spec, creationFlags boo
 		return State{}, e
 	}
 	defer unlock()
+	return c.upLocked(ctx, spec, creationFlags)
+}
+func (c *Controller) upLocked(ctx context.Context, spec config.Spec, creationFlags bool) (State, error) {
 	s, e := c.load()
 	if e != nil {
 		return s, e
+	}
+	if s.State == "deleting" {
+		return s, errors.New("interrupted deletion; finish delete/reset with the original machine ID before starting")
 	}
 	o, e := c.Backend.Observe(ctx)
 	if e != nil {
@@ -206,6 +218,14 @@ func (c *Controller) Status(ctx context.Context) (State, error) {
 		s.Observed = "unknown"
 		return c.fail(&s, e)
 	}
+	if s.State == "deleting" {
+		s.Guest = nil
+		s.Observed = o.Status
+		if !o.Exists {
+			s.Observed = "absent"
+		}
+		return s, c.save(&s)
+	}
 	s.Observed = o.Status
 	s.Guest = nil
 	if !o.Exists {
@@ -249,6 +269,9 @@ func (c *Controller) Stop(ctx context.Context) (State, error) {
 	}
 	if s.State == "not_created" {
 		return s, nil
+	}
+	if s.State == "deleting" {
+		return s, errors.New("interrupted deletion; finish explicit delete/reset instead of stopping or resuming")
 	}
 	o, e := c.Backend.Observe(ctx)
 	if e != nil {
@@ -298,6 +321,9 @@ func (c *Controller) GuestCall(ctx context.Context, q protocol.Request) (*protoc
 	s, e := c.load()
 	if e != nil {
 		return nil, e
+	}
+	if s.State == "deleting" {
+		return nil, protocol.Fail("NOT_READY", "deletion in progress; finish explicit delete/reset")
 	}
 	if s.State == "not_created" {
 		return nil, protocol.Fail("NOT_READY", "create and start the local machine first")

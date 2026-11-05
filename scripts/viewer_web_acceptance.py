@@ -29,7 +29,7 @@ def main():
     evidence = args.evidence.resolve()
     evidence.mkdir(parents=True, exist_ok=False)
     root = args.state_dir.resolve()
-    if root.parent != Path('/private/tmp') or not root.name.startswith('agentlinux-viewer-acceptance-'):
+    if root.parent != Path('/private/tmp') or not root.name.startswith(('agentlinux-viewer-acceptance-', 'agentlinux-rc-acceptance-')):
         raise RuntimeError('acceptance requires an explicitly selected disposable test namespace')
     identity = json.loads((root / 'state.json').read_text())['machineId']
     viewer_url = next(word for word in args.viewer_output.read_text().split() if word.startswith('http://127.0.0.1:'))
