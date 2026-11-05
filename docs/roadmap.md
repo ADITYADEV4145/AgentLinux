@@ -20,9 +20,11 @@ Implemented managed Xfce/Xvfb/Chromium, current PNG capture, recent-frame coordi
 
 Not claimed: Wayland/multiple displays, broad application paste parity, a strong per-command malicious-code sandbox, implicit Phase 1 upgrades, MCP or live viewing. No paid infrastructure was allocated.
 
-## Phase 3 — Shared API, MCP and observable lifecycle
+## Phase 3 — MCP and agent integration (complete)
 
-Implement the broker/private Unix socket and shared application operations, stable error/capability schemas, input ownership/takeover and operation reconciliation. Add the official maintained MCP SDK with explicit version pin only when integrating it. Validate a real client, older supported protocol negotiation, cancellation, stale frames and service failure. Do not count backend doubles as VM evidence.
+Implemented official Go SDK v1.8.0 stdio, ten real local tools, strict schemas, structured/image/error outputs, observed-frame input, deadlines/cancellation and immediate-busy serialization. Added agent instructions and configuration printing for Codex, Claude Code and VS Code without changing global settings. Official SDK protocol tests, multiple supported protocol revisions, real stdio/VM acceptance and actual Codex screenshot → input → verify acceptance passed. Claude Code and VS Code remain explicitly untested as agent integrations. See verification.md and ADR 0007.
+
+The private broker and persistent ownership/takeover lease are deferred to Phase 4: existing file locks plus per-server serialization satisfy this slice. No nonfunctional cloud endpoint is advertised.
 
 ## Phase 4 — Terminal visibility and local MVP hardening
 
@@ -34,6 +36,6 @@ No-cost provider/license/contract review first. Evaluate one fixed region/provid
 
 ## Outstanding risks
 
-NAT reaches host/LAN; offline/egress-restricted modes are not validated. Lima bootstrap management SSH is trusted and weaker than application pinning. Provisioning data retains guest host-key material in private state. Detached image signatures and broad host compatibility are unverified. No MCP/live viewer exists yet; desktop/control is implemented. Stronger hostile-guest security, distribution compliance and performance claims require further evidence.
+NAT reaches host/LAN; offline/egress-restricted modes are not validated. Lima bootstrap management SSH is trusted and weaker than application pinning. Provisioning data retains guest host-key material in private state. Detached image signatures and broad host compatibility are unverified. MCP and desktop/control are implemented; no live viewer exists yet. Stronger hostile-guest security, distribution compliance and performance claims require further evidence.
 
-Next action after Phase 2: implement the MCP/shared-client integration with explicit capabilities and input ownership, while preserving the tested guest contract. End every phase with actual outcome, key files, commands, automated/hardware/skipped verification, limits, git status/commit, exit verdict and exact next action.
+Next action after Phase 3: implement measured terminal visibility with explicit human/agent ownership and takeover, while preserving the tested guest and MCP contracts. End every phase with actual outcome, key files, commands, automated/hardware/skipped verification, limits, git status/commit, exit verdict and exact next action.

@@ -2,7 +2,36 @@
 
 Phase 0 inspection: 2026-11-04. Phase 1 verification: 2026-11-05 (America/Chicago).
 
-## Phase 2 results — 2026-11-05 (current)
+## Phase 3 results — 2026-11-05 (current)
+
+**Implemented official-SDK MCP stdio; real SDK client and real Codex agent acceptance passed on the actual VM.** Phase 3 began with a clean Phase 2 checkout. No Phase 2 guest migration was needed. Official MCP specification/SDK and client documentation were consulted before implementation; sources and exact setup are in [mcp.md](mcp.md). ADR 0007 records the bounded adapter and explicit broker/ownership deferral.
+
+### Automated checks
+
+`make build test check` passed: host CLI and static Linux ARM64 helper, `go test -race ./...`, `go vet ./...`, whitespace checks. The new tests use the **real official Go MCP SDK client**, not a handwritten MCP mock. In-memory transports test initialize/list/call, tool schema validation/unknown fields, coordinate/key/cwd/timeout rejection, exact Unicode routing, PNG image blocks and metadata without duplicate PNG bytes, invalid/oversized frames, typed unavailable/disconnected/unsupported/stale/uncertain failures, command exit/error data, concurrency/busy gate, per-call deadline, client cancellation and gate release, debug redaction, and configuration printer/error stdout behavior. Initialization/status were tested explicitly under protocol revisions 2025-03-26, 2025-06-18, 2025-11-25 and 2026-07-28.
+
+Machine doubles exercise the MCP adapter only; they are **not** claimed as virtualization evidence. Existing guest/protocol/desktop/lifecycle tests remain. The real hardware test skips explicitly unless AGENTLINUX_ACCEPT_* environment variables are set. Maximum image validation is bounded; no throughput, broad client compatibility, or hostile-client denial-of-service certification is claimed.
+
+### Real Mac and stdio acceptance
+
+Host: ARM64 macOS 26.5 (25F71), 12 logical CPUs, 24 GiB RAM. Disposable VM: Lima 2.2.1/VZ, Debian 13 ARM64 build 20261001-2618, 2 vCPUs/4 GiB/24 GiB logical disk. Guest helper 0.2.0, guest protocol 2.0. MCP SDK v1.8.0; real SDK client negotiated MCP 2026-07-28. Guest image provenance remains the reviewed manifest; no new image was redistributed.
+
+1. Booted a fresh disposable VM through the actual CLI and waited for the real handshake plus managed desktop readiness.
+2. Ran opt-in `TestRealStdioGuest` using official `mcp.CommandTransport` launching the actual `agent-linux mcp` binary. It initialized, checked live VM status, captured PNG plus frame metadata, opened guest Chromium, sent CTRL+L, Unicode-containing page text and ENTER with observed frame IDs, then captured the changed display. Guest `xdotool` found the visible expected browser title through the MCP guest command tool. PNGs were visually inspected: actual Linux panel, Chromium, expected page text and Unicode were visible.
+3. Verified a nonzero guest command preserved exit/stderr data in an error result, and a timed-out sleep returned COMMAND_TIMEOUT with confirmed command cleanup. Re-ran this real stdio test after the final adapter/schema/binary changes; passed again.
+4. Ran installed **Codex CLI 0.164.0-alpha.11.1**, already authenticated via ChatGPT, against that real VM using temporary per-invocation MCP config. No credentials were read/copied into the repo. Host sandbox stayed read-only; only six named guest desktop tools were exposed/approved for that test, guest exec excluded. No global client settings were edited.
+5. The recorded Codex events show ten completed MCP calls: status, five screenshots, open browser, CTRL+L, type https://example.com, ENTER. No host shell or guest command call occurred. The final PNG visibly shows Chromium at example.com with tab title “Example Domain” and the page's multilingual explanatory text. Codex's final answer correctly described that observed screen. Original before/after screenshots and event stream are retained in ignored private `artifacts/phase3/codex-approved/`; deterministic SDK evidence is in `artifacts/phase3/`. These generated files contain machine-specific data and are not committed.
+6. An initial Codex invocation with approval_policy=never and no per-tool approvals correctly refused its first status tool. That was a client policy failure, not successful guest acceptance. After checking official Codex configuration documentation, the bounded test explicitly approved only the named guest tools for that invocation. The checked-in opt-in script reproduces this setup.
+
+Claude Code 2.1.318 was installed but **signed out**; no Claude agent/image/tool acceptance was run. VS Code Copilot was **not tested**. Their configuration examples were checked against official docs and printer tests; compatibility is not claimed from those examples. No new Mac pointer/clipboard measurement was run in Phase 3: guest routing is unchanged, product code has no host control/clipboard path, and Phase 2's actual unchanged-counter evidence remains separately recorded.
+
+### Scope, cleanup and exit verdict
+
+Phase 3 implements all required real local operations through the common interface. Capabilities/readiness remain live guest observations; unavailable operations fail visibly. Stdio has no listener and stdout contains only protocol traffic. Concurrent calls get immediate MACHINE_BUSY; machine file locks cover other processes. A 70-second request ceiling, bounded framing/images/guest output and propagated cancellation are implemented. Agent guidance is not a security boundary; connected clients receive powerful guest access and NAT host/LAN reachability remains.
+
+The broker, persistent human/agent takeover leases, fair queuing, live viewer, cloud, distribution, paid resources and deployments remain outside this phase. Client/model image support varies. Recent frame expiry can require recapture when model reasoning is slow. Hardware evidence covers one Mac/configuration, not a support matrix. Cleanup completed: confirmed the disposable VM stopped, checked its machine identity against the original creation result, deleted only its private Lima instance, and removed its owned state/keys. Evidence was retained privately under ignored artifacts/phase3. No acceptance VM is left running. All Phase 3 local exit criteria passed, including actual agent acceptance. GitHub CI is checked after pushing the phase commit and reported separately; local checks above are not represented as remote CI execution.
+
+## Phase 2 results — 2026-11-05 (historical)
 
 **Actual guest desktop/control and bounded guest execution implemented; real Mac acceptance passed.** The working tree was clean at phase start. Authenticated GitHub inspection found no open issues. Phase 1's GitHub `checks` run 41982081761 succeeded for commit 7128b09. No Phase 1 blocker was hidden: private tmp/home/AF_UNIX-only restrictions were changed where they prevented the real desktop, and the protocol was versioned explicitly.
 

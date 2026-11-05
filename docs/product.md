@@ -1,6 +1,8 @@
 # Product specification
 
-Phase 0 specification, updated 2026-11-05. Phase 2 adds actual guest desktop capture/input and bounded arbitrary guest commands to local lifecycle. MCP and live viewer portions of the full MVP below remain targets; README documents the commands that actually exist.
+Phase 3 status (2026-11-05): local desktop/control and official-SDK MCP are implemented. An actual Codex agent operated Chromium through screenshots and guest input. Claude Code/VS Code setup is documented but their agent compatibility is untested. Cloud and live viewing remain future scope; see [MCP setup](mcp.md) and [verification](verification.md).
+
+Phase 0 specification, updated 2026-11-05. Phase 2 adds actual guest desktop capture/input and bounded arbitrary guest commands to local lifecycle. Phase 3 implements MCP; live viewer portions of the full MVP below remain targets; README documents the commands that actually exist.
 
 ## User, problem, and positioning
 
@@ -12,7 +14,7 @@ A terminal alone cannot show what a desktop agent is doing. Running the agent's 
 
 On an Apple silicon Mac, create a new Linux machine, show its desktop in Kitty, and connect an MCP client. The agent opens an offline test page in guest Chromium, clicks a text field, enters `Hello, café — 日本語 👋`, submits the form, and screenshots the result. The user watches, pauses agent input, takes control, then hands control back. Stop and restart the machine; a file in the guest survives and the old session ID is rejected. The Mac's pointer and clipboard remain unchanged. This is a planned acceptance scenario, not a completed demo.
 
-The first engineering test is smaller: boot → guest helper → screenshot → click/type → verify → stop. Add terminal viewing and MCP integration only after that path works.
+The first engineering test is smaller: boot → guest helper → screenshot → click/type → verify → stop. That smaller path and MCP integration now work; terminal viewing remains future work.
 
 ## Local MVP
 
@@ -52,21 +54,21 @@ agentlinux machine stop demo
 agentlinux machine delete demo --confirm=demo
 ```
 
-Deletion confirmation is enforced by the CLI; the MCP desktop server does not expose deletion. `create` reports the resource plan, image source, estimated download size when known, and network implications before changes. Proposed cloud syntax is `--backend=cloud --workspace=<id> --region=<supported-region>`; it must never silently fall back to local or create paid resources without separate authorization.
+The future deletion CLI must enforce confirmation; the MCP desktop server does not expose deletion. `create` reports the resource plan, image source, estimated download size when known, and network implications before changes. Proposed cloud syntax is `--backend=cloud --workspace=<id> --region=<supported-region>`; it must never silently fall back to local or create paid resources without separate authorization.
 
 ## Agent workflow
 
-The user creates/starts a machine outside MCP and launches `agentlinux mcp --machine=demo`. The client lists tools, reads `computer_status` capabilities and current session, and requests `computer_screenshot`. Each image includes frame ID, session ID, display generation, dimensions, and capture time in accompanying structured metadata. `computer_input` accepts a typed action plus the observed frame reference. Observe again to verify outcomes. A completed input call means input was dispatched, not that the task succeeded.
+The user creates/starts a machine outside MCP and launches `agent-linux mcp --state-dir /absolute/private/state`. The client lists tools, reads `computer_status` capabilities and current session, and requests `computer_screenshot`. Each image includes frame ID, session ID, display generation, dimensions, and capture time in accompanying structured metadata. The separate click/move/drag/scroll/type/key tools require the observed frame reference. Observe again to verify outcomes. A completed input call means input was dispatched, not that the task succeeded.
 
-Tools: `computer_status`, `computer_screenshot`, `computer_input`. Input actions: click, move, drag, scroll, text, key chord. No arbitrary host shell, model calls, lifecycle deletion, credential transfer, or implicit uploads. Unsupported tools/actions fail explicitly. Screens and web pages are untrusted content, including instructions visible to the model. Adding this MCP server does not disable an agent client's other host tools; users must configure those separately if they want guest-only execution.
+Implemented tools: `computer_status`, `computer_screenshot`, `computer_click`, `computer_move`, `computer_drag`, `computer_scroll`, `computer_type`, `computer_key`, `computer_open`, `computer_run_command`; exact schemas and limits are in [mcp.md](mcp.md). Guest commands are arbitrary argv as the non-sudo guest user. No arbitrary host shell, model calls, lifecycle deletion, credential transfer, or implicit uploads. Unsupported tools/actions fail explicitly. Screens and web pages are untrusted content, including instructions visible to the model. Adding this MCP server does not disable an agent client's other host tools; users must configure those separately if they want guest-only execution.
 
 ## Trust and usability
 
-The host broker and VM runtime are trusted. The guest, agent commands, guest filenames, images, network content, and all guest output are untrusted. The guest desktop account has no sudo rights; provisioning uses a separate administrative identity. X11 clients within that desktop share access to its input and screen: guest apps are not mutually isolated.
+The host CLI/MCP process and VM runtime are trusted; the proposed persistent broker is deferred. The guest, agent commands, guest filenames, images, network content, and all guest output are untrusted. The guest desktop account has no sudo rights; provisioning uses a separate administrative identity. X11 clients within that desktop share access to its input and screen: guest apps are not mutually isolated.
 
 The VM reduces exposure; it does not guarantee containment of malicious code or network attacks. Networked guests may reach the host/LAN and exfiltrate guest data. Destructive actions inside the guest are still destructive. Host-side API access is equivalent to controlling the selected guest and must not be exposed on the LAN.
 
-Human takeover revokes the agent input lease and rejects agent writes with `CONTROL_BUSY`. Keyboard-only takeover/exit controls, a visible owner indicator, text status, retry instructions, and non-color-only error indicators are required. Always restore terminal modes after exit or interruption. Do not require a mouse for setup. Provide browser zoom and explicit text entry for Unicode/IME use; browser/terminal raster views alone do not provide screen-reader access to guest applications. AT-SPI accessibility tooling is a later capability, not an MVP guarantee.
+The future viewer must implement human takeover that revokes the agent input lease and rejects agent writes with `CONTROL_BUSY`. Keyboard-only takeover/exit controls, a visible owner indicator, text status, retry instructions, and non-color-only error indicators are required. Always restore terminal modes after exit or interruption. Do not require a mouse for setup. Provide browser zoom and explicit text entry for Unicode/IME use; browser/terminal raster views alone do not provide screen-reader access to guest applications. AT-SPI accessibility tooling is a later capability, not an MVP guarantee.
 
 ## Failure behavior
 

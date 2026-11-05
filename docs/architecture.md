@@ -2,6 +2,14 @@
 
 Phase 0 • 2026-11-04 • Decisions below specify intended implementation. The Phase 0 design below is retained as the target architecture; current implementation and hardware evidence are distinguished in the snapshot below. Research facts and links are in [research.md](research.md); experiments and evidence are in [verification.md](verification.md).
 
+## Phase 3 implementation snapshot (2026-11-05)
+
+The local machine now has an official Go MCP SDK v1.8.0 stdio adapter. Ten documented tools cover status, fresh PNG, six input operations, fixed guest apps and bounded arbitrary guest commands. Strict tool schemas, structured/text result envelopes, image content, recent observed frame IDs, cancellation/deadlines, immediate-busy serialization and existing cross-process locks protect the real common interface. No cloud adapter or automatic lifecycle operation is exposed. The protocol 2.0 guest and Phase 2 image recipe are unchanged.
+
+A real SDK CommandTransport client and a real authenticated Codex agent operated the actual Linux desktop. Codex navigated Chromium to example.com with guest keys/text and described the observed PNG. Claude Code setup is documentation-based (installed but signed out), and VS Code is untested; neither is claimed compatible from configuration alone. See [MCP contract/setup](mcp.md), [verification](verification.md) and [ADR 0007](decisions/0007-mcp-stdio.md).
+
+The originally proposed broker is deferred: serialized common-interface operations and file locks suffice for this phase. Persistent human/agent ownership leases and live-viewer takeover remain Phase 4 work. There is no fairness queue or automatic mutation replay. MCP initializes with exact agent guidance, but that guidance is not a security boundary. Client process trust and powerful guest access remain explicit. SDK dependency notices and mixed MIT/Apache terms are inventoried under third_party.
+
 ## Phase 2 implementation snapshot (2026-11-05)
 
 Implemented and hardware-tested: managed Xfce/Xvfb, Mousepad/Chromium, fresh 1280×800 PNG capture, guest-only XTEST mouse/keys and UTF-8 clipboard paste, a shared local machine interface, and arbitrary non-sudo guest argv execution with per-request cgroup cleanup. CLI computer commands are real; no MCP, continuous viewer or cloud backend is present. Phase 1 now has a successful GitHub CI run, and its private-tmp/home/AF_UNIX-only restrictions were corrected for the desktop.

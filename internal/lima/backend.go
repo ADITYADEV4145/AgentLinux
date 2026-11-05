@@ -357,7 +357,7 @@ func (b *Backend) exchange(ctx context.Context, s lifecycle.State, o lifecycle.O
 
 func (b *Backend) exchangeCall(ctx context.Context, s lifecycle.State, o lifecycle.Observation, operation *protocol.Request) (*protocol.Info, error) {
 	if o.Port < 1 || o.Port > 65535 {
-		return nil, errors.New("runtime SSH endpoint not available")
+		return nil, protocol.Fail("DISCONNECTED", "runtime SSH endpoint not available")
 	}
 	args := []string{"-F", "/dev/null", "-T", "-p", fmt.Sprint(o.Port), "-i", filepath.Join(b.Root, "control"), "-o", "IdentitiesOnly=yes", "-o", "IdentityAgent=none", "-o", "ForwardAgent=no", "-o", "ForwardX11=no", "-o", "ClearAllForwardings=yes", "-o", "StrictHostKeyChecking=yes", "-o", "NoHostAuthenticationForLocalhost=no", "-o", "UserKnownHostsFile=" + filepath.Join(b.Root, "known_hosts"), "-o", "GlobalKnownHostsFile=/dev/null", "-o", "HostKeyAlias=agent-linux-" + s.MachineID, "-o", "HostKeyAlgorithms=ssh-ed25519", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ServerAliveInterval=2", "-o", "ServerAliveCountMax=2", "agent@127.0.0.1"}
 	cmd := process.Prepare(ctx, "ssh", args...)
@@ -389,10 +389,13 @@ func (b *Backend) exchangeCall(ctx context.Context, s lifecycle.State, o lifecyc
 	}
 	var p protocol.Response
 	if e = protocol.Read(reader, &p); e != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		if strings.Contains(string(errbuf.Bytes()), "Host key verification failed") || strings.Contains(string(errbuf.Bytes()), "REMOTE HOST IDENTIFICATION HAS CHANGED") {
 			return nil, protocol.Fail("HOST_KEY_MISMATCH", "pinned guest host key does not match; do not disable verification")
 		}
-		return nil, errors.New("guest disconnected before handshake; inspect provisioning/service and host-key enrollment")
+		return nil, protocol.Fail("DISCONNECTED", "guest disconnected before handshake; inspect provisioning/service and host-key enrollment")
 	}
 	if e = checkResponse(q, p); e != nil {
 		return nil, e
