@@ -65,3 +65,9 @@ Next action: investigate the recorded first cold-profile Chromium launch failure
 Implemented: common remote machine adapter, development identity/workspace ownership, durable session intents, bounded concurrency/runtime reservations, idempotency, orphan reconciliation, revocation/TTL/idle cleanup, authenticated PNG viewing, capability-filtered MCP, optional gated E2B SDK adapter, and single-command interactive local startup with human/agent ownership.
 
 Pending provider-dependent work: commercial authorization, reviewed/locked SDK environment, selected region/template/architecture, real paid-provider acceptance and enforcement tests, measured costs/latency/egress, production TLS/OIDC/transactional persistence/operations. Default fixture is simulated. Phase 7 payments/billing is deferred; no paid/public service was activated. See [Phase 6 acceptance gates](cloud.md).
+
+## Phase 7 — sandbox metering/billing foundation
+
+Implemented: atomic session/usage ledger, pinned immutable rates, funded optional trial reservations, workspace caps/concurrency/duration, account cancellation/suspension, current-state payment reconciliation, official Stripe Go SDK customer setup/portal/manual usage invoices, verified durable webhook inbox, human/JSON billing CLI, adjustment/review records and an editable assumption-based cost model. Pricing is unconfigured by default; local remains free. Live keys/mode and automatic collection are rejected.
+
+The earlier Phase 6 deferral is superseded by this implementation. Stripe-hosted sandbox acceptance is pending test credentials. Production transactional storage/queue, operational recovery/retention, tax/refund validation, real provider-cost enforcement, commercial permission and separately authorized production activation remain gates. See [billing scope and acceptance](billing.md).

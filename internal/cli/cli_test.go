@@ -86,3 +86,20 @@ func TestStartHelpAndInvalidArguments(t *testing.T) {
 		}
 	}
 }
+
+func TestBillingHelpConfirmationAndReadableMoney(t *testing.T) {
+	var out, errout bytes.Buffer
+	if code := Run(context.Background(), []string{"billing", "--help"}, &out, &errout); code != 0 || !strings.Contains(out.String(), "No live mode") {
+		t.Fatal(code, out.String(), errout.String())
+	}
+	for _, args := range [][]string{{"billing", "configure", "--state-dir", "/private/tmp/never-opened"}, {"billing", "cancel", "--config", "/nonexistent"}} {
+		out.Reset()
+		errout.Reset()
+		if Run(context.Background(), args, &out, &errout) == 0 || !strings.Contains(errout.String(), "--yes") {
+			t.Fatal("missing explicit confirmation", args, errout.String())
+		}
+	}
+	if money(1234567) != "$1.234567" || money(-10000) != "-$0.010000" {
+		t.Fatal("currency display")
+	}
+}

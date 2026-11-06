@@ -1,0 +1,19 @@
+{
+  "version": "billing-sandbox-1",
+  "mode": "sandbox",
+  "currency": "usd",
+  "rates": [{
+    "id": "illustrative-not-retail-v1",
+    "effectiveAt": "2026-01-01T00:00:00Z",
+    "microsPerHour": 3600000,
+    "cpus": 2,
+    "memoryGiB": 4,
+    "diskGiB": 24
+  }],
+  "policy": {
+    "trialMicros": 900000,
+    "spendingCapMicros": 1000000,
+    "concurrency": 1,
+    "maxSeconds": 900
+  }
+}

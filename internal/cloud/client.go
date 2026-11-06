@@ -175,7 +175,7 @@ func (c *Client) Status(ctx context.Context) (lifecycle.State, error) {
 	if s.Simulated {
 		observed = "SIMULATED DEVELOPMENT; NO LINUX VM"
 	}
-	return lifecycle.State{Backend: "cloud", Remote: &lifecycle.RemoteState{Provider: s.Provider, ExpiresAt: s.Expires, IdleStopAt: s.IdleStopAt, EstimatedRuntimeSeconds: s.EstimatedSeconds, Persistent: false, Simulated: s.Simulated}, Schema: 1, MachineID: s.ID, State: s.State, Observed: observed, Stage: s.Provider, BackendVersion: Version, LastError: s.Error, UpdatedAt: time.Now().UTC(), Guest: &protocol.Info{GuestVersion: s.Provider, Protocol: Version, MachineID: s.ID, SessionID: s.ID, OS: "provider-dependent", Arch: "provider-dependent", Capabilities: s.Capabilities, Desktop: &protocol.DesktopStatus{Ready: s.State == "ready", Generation: s.Generation, Server: observed, Width: 1280, Height: 800}}}, nil
+	return lifecycle.State{Backend: "cloud", Remote: &lifecycle.RemoteState{Billing: s.Billing, Provider: s.Provider, ExpiresAt: s.Expires, IdleStopAt: s.IdleStopAt, EstimatedRuntimeSeconds: s.EstimatedSeconds, Persistent: false, Simulated: s.Simulated}, Schema: 1, MachineID: s.ID, State: s.State, Observed: observed, Stage: s.Provider, BackendVersion: Version, LastError: s.Error, UpdatedAt: time.Now().UTC(), Guest: &protocol.Info{GuestVersion: s.Provider, Protocol: Version, MachineID: s.ID, SessionID: s.ID, OS: "provider-dependent", Arch: "provider-dependent", Capabilities: s.Capabilities, Desktop: &protocol.DesktopStatus{Ready: s.State == "ready", Generation: s.Generation, Server: observed, Width: 1280, Height: 800}}}, nil
 }
 func (c *Client) Screenshot(ctx context.Context) (*protocol.Frame, error) {
 	o, e := c.call(ctx, Operation{Method: "screenshot"})

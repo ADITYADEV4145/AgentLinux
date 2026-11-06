@@ -1,6 +1,6 @@
 # Phase 6: development cloud backend
 
-Status (2026-11-05): implemented development control plane and HTTP machine client; default provider is **SIMULATED**, with no Linux VM. Optional E2B SDK adapter is implemented but **not provider-tested**. No account, paid machine, public listener, deployment, billing product or release was created. Phase 7 billing is deferred at the user's direction.
+Status (2026-11-05): implemented development control plane and HTTP machine client; default provider is **SIMULATED**, with no Linux VM. Optional E2B SDK adapter is implemented but **not provider-tested**. No account, paid machine, public listener, deployment, billing product or release was created. Phase 7 now adds an opt-in sandbox metering/payment foundation; see [billing](billing.md). Live billing remains disabled.
 
 ## Recommendation and prior art
 
@@ -46,7 +46,7 @@ The control plane authenticates every request, binds session to identity/workspa
 
 Persist intent before provider creation. Label resources by deployment/session, never blindly repeat an ambiguous creation, recover labeled resources after a lost reply, remove duplicates and unknown resources only within this deployment, and confirm absence before final stopped state. Incomplete/truncated inventory fails reconciliation. Active requests use per-session exclusion. Revocation is checked before and after calls; a mutation already dispatched cannot be undone, but its result is withheld after revocation. Deletion waits for an in-flight provider action. The provider API may still be unreachable; reservations and stopping state remain until reconciliation confirms absence.
 
-Default limits: 2 sessions globally, 1 per identity, 900-second maximum, 300-second idle expiry, cumulative 1,800-second reserved-runtime budget. Configuration is operator-owned JSON and validated within prototype maxima (4 sessions, 900-second lifetime, 14,400-second budget). Reserve full requested lifetime before allocation; terminal observations conservatively account for failed/provisioning time. Status exposes expiry, idle deadline, estimated runtime and limits. Screenshots/status do not keep a session alive; actions do. These are resource guards, **not a billing ledger or guaranteed spending cap**. Provider billing lag, control-plane outages and external resources can create charges beyond these estimates. No prices, payment integration or customer trial are activated.
+Default limits: 2 sessions globally, 1 per identity, 900-second maximum, 300-second idle expiry, cumulative 1,800-second reserved-runtime budget. Configuration is operator-owned JSON and validated within prototype maxima (4 sessions, 900-second lifetime, 14,400-second budget). Reserve full requested lifetime before allocation; terminal observations conservatively account for failed/provisioning time. Status exposes expiry, idle deadline, estimated runtime and limits. Screenshots/status do not keep a session alive; actions do. These are resource guards, **not a billing ledger or guaranteed spending cap**. Provider billing lag, control-plane outages and external resources can create charges beyond these estimates. No live prices, payment integration or customer trial are activated by Phase 6. Phase 7 adds separately configured sandbox-only metering and payment operations.
 
 ## Viewing and human control
 

@@ -96,3 +96,7 @@ Acceptance requires the scripted offline form task and persistence test to pass 
 One-command local experience: `agent-linux start` resumes/creates Linux and opens interactive Kitty (secure local web fallback elsewhere). Humans and agents share the desktop with explicit input handoff; Ctrl+] exits while Linux remains running. This retains a complete Debian/Xfce workstation, not a separate reduced cloud shell.
 
 Development cloud sessions share the machine/MCP/viewer contract but advertise differences. The default fixture is simulated; optional E2B execution is not provider-accepted. Cloud sessions are ephemeral, bounded and authenticated; no billing/public service, account signup, cloud files, team features or durable home are offered. Provider commercial authorization and real network/desktop/cleanup verification are release gates. [Details](cloud.md).
+
+## Phase 7 increment
+
+Local use remains free. The cloud development service can now expose configured test rates, plan/trial, estimates, final history, reservations and workspace limits through `billing status`. Stripe sandbox setup/manual invoices are implemented with no live activation path or finalized retail pricing. Funded trials are opt-in; no team plan is advertised. Actual hosted sandbox acceptance and production billing operations remain pending; [policy and gaps](billing.md).

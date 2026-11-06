@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/ADITYADEV4145/AgentLinux/internal/billing"
 	"slices"
 	"sync"
 	"time"
@@ -21,17 +22,21 @@ type frameRef struct {
 	captured   time.Time
 }
 type Manager struct {
-	mu        sync.Mutex
-	root      string
-	db        Database
-	provider  Provider
-	now       func() time.Time
-	busy      map[string]bool
-	frames    map[string]map[string]frameRef
-	poisoned  bool
-	lastAudit map[string]string
-	sequence  map[string]uint64
-	leases    map[string]controlLease
+	mu                 sync.Mutex
+	payments           billing.Payments
+	webhookSecret      string
+	lastPaymentRefresh time.Time
+	lastPaymentStep    time.Time
+	root               string
+	db                 Database
+	provider           Provider
+	now                func() time.Time
+	busy               map[string]bool
+	frames             map[string]map[string]frameRef
+	poisoned           bool
+	lastAudit          map[string]string
+	sequence           map[string]uint64
+	leases             map[string]controlLease
 }
 
 func HashToken(s string) string { h := sha256.Sum256([]byte(s)); return hex.EncodeToString(h[:]) }
@@ -59,16 +64,22 @@ func New(root string, p Provider) (*Manager, error) {
 			return nil, errors.New("invalid cloud session state")
 		}
 	}
+	if db.Billing != nil {
+		if e := db.Billing.Validate(); e != nil {
+			return nil, e
+		}
+	}
 	return &Manager{root: root, db: db, provider: p, now: time.Now, busy: map[string]bool{}, frames: map[string]map[string]frameRef{}, leases: map[string]controlLease{}, lastAudit: map[string]string{}, sequence: map[string]uint64{}}, nil
 }
 func (m *Manager) save() error {
 	if m.poisoned {
 		return errors.New("cloud durable state unavailable; restart requires operator inspection")
 	}
-	if e := storage.JSON(m.root, "cloud.json", m.db); e != nil {
+	if e := persistDatabase(m.root, m.db); e != nil {
 		m.poisoned = true
 		return e
 	}
+
 	for id, s := range m.db.Sessions {
 		signature := s.State + "/" + s.ProviderID + "/" + s.Error
 		if m.lastAudit[id] != signature {
@@ -127,6 +138,9 @@ func (m *Manager) Create(i Identity, key string, q Create) (Session, error) {
 			if int(s.Expires.Sub(s.Created).Seconds()) != q.Seconds || s.Workspace != q.Workspace {
 				return Session{}, protocol.Fail("IDEMPOTENCY_CONFLICT", "key already used with different parameters")
 			}
+			if m.db.Billing != nil {
+				s.Billing = m.db.Billing.SessionCost(s.ID)
+			}
 			return s, nil
 		}
 		if active(s) {
@@ -144,10 +158,20 @@ func (m *Manager) Create(i Identity, key string, q Create) (Session, error) {
 	}
 	now := m.now().UTC()
 	s := Session{ID: protocol.ID(), Owner: i.ID, Workspace: q.Workspace, RequestKey: key, State: "creating", Provider: m.provider.Name(), Simulated: m.provider.Simulated(), Created: now, Expires: now.Add(time.Duration(q.Seconds) * time.Second), LastAction: now}
+	if m.db.Billing != nil {
+		if e := m.db.Billing.Reserve(i.ID, cur.Workspace, s.ID, now, s.Expires); e != nil {
+			return Session{}, protocol.Fail("BILLING_LIMIT", e.Error())
+		}
+	} else if !m.provider.Simulated() {
+		return Session{}, protocol.Fail("BILLING_UNAVAILABLE", "configure funded sandbox metering/limits before real provider allocation")
+	}
 	m.db.Sessions[s.ID] = s
 	if e := m.save(); e != nil {
 		delete(m.db.Sessions, s.ID)
 		return Session{}, e
+	}
+	if m.db.Billing != nil {
+		s.Billing = m.db.Billing.SessionCost(s.ID)
 	}
 	return s, nil
 }
@@ -155,7 +179,13 @@ func (m *Manager) Get(i Identity, id string) (Session, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	s, e := m.owner(i, id)
+	if e != nil {
+		return Session{}, e
+	}
 	limits := m.db.Limits
+	if m.db.Billing != nil {
+		s.Billing = m.db.Billing.SessionCost(id)
+	}
 	s.Policy = &limits
 	if active(s) {
 		s.EstimatedSeconds = max(0, int64(m.now().Sub(s.Created).Seconds()))
@@ -367,6 +397,9 @@ func (m *Manager) Call(ctx context.Context, i Identity, id string, q Operation) 
 // Tick performs one bounded reconciliation pass. A single server owns the state
 // directory lock. A failed/ambiguous create is discovered by labels, never retried.
 func (m *Manager) Tick(ctx context.Context) error {
+	if e := m.tickBilling(ctx); e != nil {
+		return e
+	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	m.mu.Lock()
@@ -462,6 +495,12 @@ func (m *Manager) reconcile(ctx context.Context, id string, inventory map[string
 		s = m.db.Sessions[id]
 		s.State = "stopped"
 		s.StoppedAt = m.now().UTC()
+		if m.db.Billing != nil {
+			if e := m.db.Billing.Observe(id, s.ReadyAt, true, s.StoppedAt); e != nil {
+				m.poisoned = true
+				return e
+			}
+		}
 		s.ObservedSeconds = int64(s.StoppedAt.Sub(s.Created).Seconds())
 		if s.ObservedSeconds < 0 {
 			s.ObservedSeconds = int64(s.Expires.Sub(s.Created).Seconds())
@@ -505,6 +544,14 @@ func (m *Manager) reconcile(ctx context.Context, id string, inventory map[string
 	m.mu.Unlock()
 	probe, e := m.provider.Probe(ctx, s)
 	m.mu.Lock()
+	if e == nil && probe.Ready && m.db.Billing != nil {
+		if reservation, ok := m.db.Billing.Reservations[id]; ok {
+			rate, err := m.db.Billing.Rate(reservation.RateID)
+			if err != nil || probe.Size == nil || probe.Size.CPUs != rate.CPUs || probe.Size.MemoryGiB != rate.MemoryGiB || probe.Size.DiskGiB > rate.DiskGiB || probe.Size.DiskGiB < 1 {
+				e = protocol.Fail("RESOURCE_LIMIT", "provider profile does not match the pinned quoted rate")
+			}
+		}
+	}
 	defer m.mu.Unlock()
 	current := m.db.Sessions[id]
 	if current.State == "stopping" {
@@ -523,6 +570,15 @@ func (m *Manager) reconcile(ctx context.Context, id string, inventory map[string
 		delete(m.leases, id)
 	} else if probe.Ready && probe.Generation != "" && probe.Capabilities != nil {
 		current.State = "ready"
+		if current.ReadyAt.IsZero() {
+			current.ReadyAt = m.now().UTC()
+		}
+		if m.db.Billing != nil {
+			if err := m.db.Billing.Observe(id, current.ReadyAt, false, m.now().UTC()); err != nil {
+				m.poisoned = true
+				return err
+			}
+		}
 		current.Error = ""
 		if current.Generation != probe.Generation {
 			delete(m.frames, id)

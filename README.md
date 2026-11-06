@@ -85,7 +85,13 @@ The web fallback uses explicit text/shortcut fields and click/scroll controls; i
 
 ## Development cloud prototype
 
-[Phase 6 setup, provider research and pending acceptance](docs/cloud.md). The authenticated API/remote machine/MCP/viewer paths are implemented. The default provider is visibly **SIMULATED** and creates no Linux VM. An optional E2B adapter requires explicit operator opt-in and remains untested against the paid provider. Production identity, public deployment, billing and persistent cloud homes are not implemented. E2B service terms require commercial permission review before a hosted offering.
+[Phase 6 setup, provider research and pending acceptance](docs/cloud.md). The authenticated API/remote machine/MCP/viewer paths are implemented. The default provider is visibly **SIMULATED** and creates no Linux VM. An optional E2B adapter requires explicit operator opt-in and remains untested against the paid provider. Production identity, public deployment, live billing and persistent cloud homes are not implemented. E2B service terms require commercial permission review before a hosted offering.
+
+## Sandbox billing foundation
+
+[Phase 7 billing policy, setup, operator recovery and pending acceptance](docs/billing.md). Local use stays free. Cloud pricing/trial allocation requires reviewed configuration; there are no finalized retail prices. The durable usage ledger, workspace reservations/caps, immutable rate versions, trial accounting and usage history are implemented. `agent-linux billing status --config FILE` shows readable amounts, with `--json` for automation.
+
+The official Stripe Go SDK supports sandbox customer/Checkout setup, portal links, explicit manual usage invoices and verified durable webhooks. Live mode/keys and automatic collection are disabled. SDK/signature tests use a local API fixture; actual Stripe-hosted Checkout remains **pending because test credentials were unavailable**. No customer was charged or paid service published. [Editable cost assumptions](examples/cost-model.json) and `python3 scripts/cost_model.py` provide estimated scenarios, not measured economics or retail prices.
 
 ## File transfer and lifecycle
 

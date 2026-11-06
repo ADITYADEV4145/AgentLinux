@@ -114,7 +114,7 @@ def run(q):
         inputs = ["move", "click", "drag", "scroll", "key"]
         if command("command -v xclip || true").strip():
             inputs.append("text")
-        return {"probe": {"ready": True, "generation": generation,
+        return {"probe": {"ready": True, "generation": generation, "size": {"cpus":info.cpu_count,"memoryGiB":info.memory_mb//1024,"diskGiB":(disk+1024**3-1)//1024**3},
                           "capabilities": {"displays": 1, "format": "png", "origin": "top-left", "scale": 1,
                                            "input": inputs, "pasteModes": ["standard", "terminal"],
                                            "maxPngBytes": 8 << 20, "maxTextBytes": 65536,

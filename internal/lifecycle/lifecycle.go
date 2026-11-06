@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ADITYADEV4145/AgentLinux/internal/billing"
 	"github.com/ADITYADEV4145/AgentLinux/internal/config"
 	"github.com/ADITYADEV4145/AgentLinux/internal/protocol"
 	"github.com/ADITYADEV4145/AgentLinux/internal/software"
@@ -16,12 +17,13 @@ import (
 )
 
 type RemoteState struct {
-	Provider                string    `json:"provider"`
-	ExpiresAt               time.Time `json:"expiresAt"`
-	IdleStopAt              time.Time `json:"idleStopAt"`
-	EstimatedRuntimeSeconds int64     `json:"estimatedRuntimeSeconds"`
-	Persistent              bool      `json:"persistent"`
-	Simulated               bool      `json:"simulated"`
+	Billing                 *billing.SessionCost `json:"billing,omitempty"`
+	Provider                string               `json:"provider"`
+	ExpiresAt               time.Time            `json:"expiresAt"`
+	IdleStopAt              time.Time            `json:"idleStopAt"`
+	EstimatedRuntimeSeconds int64                `json:"estimatedRuntimeSeconds"`
+	Persistent              bool                 `json:"persistent"`
+	Simulated               bool                 `json:"simulated"`
 }
 type State struct {
 	Backend        string         `json:"backend,omitempty"`

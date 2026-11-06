@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/ADITYADEV4145/AgentLinux/internal/billing"
 	"io"
 	"net"
 	"net/http"
@@ -42,6 +43,7 @@ Fake provider is SIMULATED, not a Linux desktop. No live billing or cloud login.
 	endpoint := f.String("endpoint", "http://127.0.0.1:8787", "init: loopback development endpoint")
 	listen := f.String("listen", "127.0.0.1:8787", "serve: literal IPv4 loopback only")
 	provider := f.String("provider", "fake-development", "init/serve: fake-development or e2b-desktop-2.7.2")
+	stripeEnabled := f.Bool("stripe-sandbox", false, "serve: explicitly enable sandbox Stripe SDK; requires server-only test key/signing secret/return URL")
 	dev := f.Bool("dev", false, "explicitly enable development identities/control plane")
 	allow := f.Bool("allow-provider-create", false, "operator opt-in to real E2B API calls; may incur charges; never implicit")
 	python := f.String("python", "", "E2B: absolute Python 3.11+ venv executable with reviewed SDK installed")
@@ -101,6 +103,17 @@ Fake provider is SIMULATED, not a Linux desktop. No live billing or cloud login.
 		m, e := cloud.New(private, p)
 		if e != nil {
 			return fail(e)
+		}
+		if *stripeEnabled {
+			pay, err := billing.NewStripe(os.Getenv("STRIPE_SECRET_KEY"), os.Getenv("AGENT_LINUX_BILLING_RETURN_URL"))
+			if err != nil {
+				return fail(err)
+			}
+			secret := os.Getenv("STRIPE_WEBHOOK_SECRET")
+			if !strings.HasPrefix(secret, "whsec_") || len(secret) < 16 {
+				return fail(errors.New("sandbox webhook signing secret is required"))
+			}
+			m.EnableSandboxPayments(pay, secret)
 		}
 		ln, e := net.Listen("tcp4", *listen)
 		if e != nil {

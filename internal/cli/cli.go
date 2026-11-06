@@ -34,6 +34,7 @@ Usage: agent-linux COMMAND [options]
   doctor          Read-only host, runtime and resource diagnostics
   start           Start/resume Linux and open its interactive viewer (NAT)
   cloud           Development cloud prototype; explicit provider opt-in
+  billing         Sandbox-only plans, usage ledger, limits and payment setup
   up --local      Create/resume the local VM; wait for guest handshake + probe
   status          Reconcile runtime state and check the actual guest service
   stop            Request graceful shutdown and confirm runtime stopped
@@ -286,6 +287,9 @@ func Run(ctx context.Context, args []string, out, errout io.Writer) int {
 	}
 	if len(args) > 0 && args[0] == "start" {
 		return runStart(ctx, args[1:], out, errout)
+	}
+	if len(args) > 0 && args[0] == "billing" {
+		return runBilling(ctx, args[1:], out, errout)
 	}
 	if len(args) > 0 && args[0] == "cloud" {
 		return runCloud(ctx, args[1:], out, errout)

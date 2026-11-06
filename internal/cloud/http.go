@@ -76,6 +76,10 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 403, nil, protocol.Fail("FORBIDDEN", "browser origins and URL credentials are not accepted"))
 		return
 	}
+	if r.URL.Path == "/v1/stripe/webhook" {
+		a.billingWebhook(w, r)
+		return
+	}
 	// Authenticate before resolving session IDs or revealing method/path existence.
 	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if token == r.Header.Get("Authorization") {
@@ -118,6 +122,18 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var result any
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	switch {
+	case r.URL.Path == "/v1/billing" && r.Method == "GET":
+		result, e = a.Manager.Billing(who)
+	case r.URL.Path == "/v1/billing" && r.Method == "POST":
+		var q struct {
+			Action    string `json:"action"`
+			RequestID string `json:"requestId"`
+			Confirm   bool   `json:"confirm"`
+		}
+		e = decode(r, &q)
+		if e == nil {
+			result, e = a.Manager.BillingAction(who, q.RequestID, q.Action, q.Confirm)
+		}
 	case r.URL.Path == "/v1/sessions" && r.Method == "POST":
 		var q Create
 		e = decode(r, &q)

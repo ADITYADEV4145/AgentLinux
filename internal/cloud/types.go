@@ -5,6 +5,7 @@ package cloud
 
 import (
 	"context"
+	"github.com/ADITYADEV4145/AgentLinux/internal/billing"
 	"github.com/ADITYADEV4145/AgentLinux/internal/protocol"
 	"time"
 )
@@ -32,6 +33,8 @@ type Identity struct {
 	Revoked   bool      `json:"revoked"`
 }
 type Session struct {
+	ReadyAt          time.Time              `json:"readyAt,omitempty"`
+	Billing          *billing.SessionCost   `json:"billing,omitempty"`
 	EstimatedSeconds int64                  `json:"estimatedRuntimeSeconds"`
 	IdleStopAt       time.Time              `json:"idleStopAt"`
 	Policy           *Limits                `json:"limits,omitempty"`
@@ -55,6 +58,7 @@ type Session struct {
 	Capabilities     *protocol.Capabilities `json:"capabilities,omitempty"`
 }
 type Database struct {
+	Billing    *billing.Database   `json:"billing,omitempty"`
 	Version    string              `json:"version"`
 	Deployment string              `json:"deployment"`
 	Provider   string              `json:"provider"`
@@ -77,7 +81,13 @@ type Resource struct {
 	Deployment string `json:"deployment"`
 	State      string `json:"state"`
 }
+type MachineSize struct {
+	CPUs      int `json:"cpus"`
+	MemoryGiB int `json:"memoryGiB"`
+	DiskGiB   int `json:"diskGiB"`
+}
 type Probe struct {
+	Size         *MachineSize           `json:"size,omitempty"`
 	Ready        bool                   `json:"ready"`
 	Generation   string                 `json:"generation"`
 	Capabilities *protocol.Capabilities `json:"capabilities"`

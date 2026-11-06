@@ -63,7 +63,7 @@ func (p *Fake) Probe(ctx context.Context, s Session) (Probe, error) {
 	c.Apps = nil
 	c.MaxExecMS = 0
 	c.MaxOutputBytes = 0
-	return Probe{true, p.generation[s.ProviderID], c}, nil
+	return Probe{Size: &MachineSize{2, 4, 24}, Ready: true, Generation: p.generation[s.ProviderID], Capabilities: c}, nil
 }
 func (p *Fake) Call(ctx context.Context, s Session, q Operation) (Output, error) {
 	p.mu.Lock()

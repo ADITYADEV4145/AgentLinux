@@ -9,6 +9,8 @@ require (
 
 require golang.org/x/term v0.40.0
 
+require github.com/stripe/stripe-go/v86 v86.4.2
+
 require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/segmentio/asm v1.1.3 // indirect
