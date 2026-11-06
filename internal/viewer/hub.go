@@ -37,6 +37,7 @@ type Hub struct {
 	next      time.Time
 	unchanged int
 	stats     Metrics
+	revision  string
 }
 
 func NewHub(m machine.Machine, interval time.Duration) *Hub {
@@ -46,7 +47,16 @@ func NewHub(m machine.Machine, interval time.Duration) *Hub {
 // Next performs no background work. At most one bounded capture and one cached
 // frame exist, regardless of client polling rate. Idle pages/viewers do no captures.
 func (h *Hub) Next(ctx context.Context) (Snapshot, error) {
+	revision := ""
+	if source, ok := h.Machine.(interface{ ObservationRevision() string }); ok {
+		revision = source.ObservationRevision()
+	}
 	h.mu.Lock()
+	if revision != "" && revision != h.revision {
+		h.revision = revision
+		h.next = time.Time{}
+		h.unchanged = 0
+	}
 	if time.Now().Before(h.next) {
 		s, e := h.last, h.err
 		h.mu.Unlock()

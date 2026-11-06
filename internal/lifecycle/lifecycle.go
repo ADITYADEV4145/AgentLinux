@@ -359,7 +359,14 @@ func (c *Controller) GuestCall(ctx context.Context, q protocol.Request) (*protoc
 			return nil, e
 		}
 	}
-	return backend.Call(ctx, s, q)
+	result, callError := backend.Call(ctx, s, q)
+	if q.Method == "input" || q.Method == "exec" || q.Method == "open" || q.Method == "files" {
+		// An ambiguous result may still have changed the guest. Wake other processes'
+		// viewers without recording command text, pixels or input. Advisory failure
+		// does not change the action result or invite a dangerous mutation retry.
+		_ = storage.JSON(c.Root, "viewer-change.json", protocol.ID())
+	}
+	return result, callError
 }
 
 // Maintain is explicit host-operator guest administration, never an MCP tool.
@@ -405,4 +412,14 @@ func (s State) MarshalJSON() ([]byte, error) {
 		*plain
 		Spec *config.Spec `json:"spec,omitempty"`
 	}{plain: &v})
+}
+
+// ObservationRevision is an advisory signal, never evidence of guest readiness.
+// Missing/malformed signals retain the viewer's ordinary bounded polling path.
+func (c *Controller) ObservationRevision() string {
+	var revision string
+	if storage.Read(c.Root, "viewer-change.json", &revision) != nil || !protocol.ValidID(revision) {
+		return ""
+	}
+	return revision
 }

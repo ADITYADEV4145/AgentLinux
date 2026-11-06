@@ -271,3 +271,34 @@ func TestNarrowStatusRemainsActionable(t *testing.T) {
 		t.Fatal("degenerate terminal could wrap or address an invalid row", line)
 	}
 }
+
+type revisionComputer struct {
+	*computer
+	revision string
+}
+
+func (c *revisionComputer) ObservationRevision() string { return c.revision }
+func TestCrossProcessRevisionWakesStaticViewer(t *testing.T) {
+	c := &revisionComputer{computer: &computer{frame: validFrame(t)}, revision: "before"}
+	h := NewHub(c, time.Second)
+	if _, e := h.Next(context.Background()); e != nil {
+		t.Fatal(e)
+	}
+	h.mu.Lock()
+	h.next = time.Now().Add(5 * time.Second)
+	h.unchanged = 30
+	h.mu.Unlock()
+	if _, e := h.Next(context.Background()); e != nil {
+		t.Fatal(e)
+	}
+	if c.calls != 1 {
+		t.Fatal("unchanged revision bypassed backpressure")
+	}
+	c.revision = "after"
+	if _, e := h.Next(context.Background()); e != nil {
+		t.Fatal(e)
+	}
+	if c.calls != 2 || h.unchanged > 1 {
+		t.Fatal("separate process mutation did not wake capture")
+	}
+}

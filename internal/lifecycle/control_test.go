@@ -88,3 +88,41 @@ func TestLocalLeaseCrossProcessMutationsExpiryRestartAndRelease(t *testing.T) {
 	}
 	_ = s
 }
+
+func TestPrivateAdvisoryViewerRevisionAcrossControllers(t *testing.T) {
+	c, f, spec := setup(t)
+	ctx := context.Background()
+	if _, e := c.Up(ctx, spec, true); e != nil {
+		t.Fatal(e)
+	}
+	c.Backend = &leaseBackend{fake: f, generation: "generation", session: protocol.ID()}
+	other := &Controller{Root: c.Root}
+	if other.ObservationRevision() != "" {
+		t.Fatal("invented revision")
+	}
+	if _, e := c.GuestCall(ctx, protocol.Request{Method: "screenshot"}); e != nil {
+		t.Fatal(e)
+	}
+	if other.ObservationRevision() != "" {
+		t.Fatal("observation is not mutation")
+	}
+	if _, e := c.GuestCall(ctx, protocol.Request{Method: "open"}); e != nil {
+		t.Fatal(e)
+	}
+	previous := other.ObservationRevision()
+	if !protocol.ValidID(previous) {
+		t.Fatal("no private cross-process wake signal")
+	}
+	if _, e := c.GuestCall(ctx, protocol.Request{Method: "input"}); e != nil {
+		t.Fatal(e)
+	}
+	if other.ObservationRevision() == previous {
+		t.Fatal("revision not changed")
+	}
+	if e := storage.Write(c.Root, "viewer-change.json", []byte(`"malformed"`)); e != nil {
+		t.Fatal(e)
+	}
+	if other.ObservationRevision() != "" {
+		t.Fatal("malformed revision accepted")
+	}
+}

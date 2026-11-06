@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Package machine defines the implemented common computer interface. Cloud is absent.
+// Package machine defines the shared local/cloud computer interface.
 package machine
 
 import (
@@ -83,4 +83,13 @@ func (l Local) ControlLease(ctx context.Context, action, generation string) erro
 		return protocol.Fail("UNSUPPORTED_OPERATION", "backend has no input ownership")
 	}
 	return c.ControlLease(ctx, action, generation)
+}
+
+// ObservationRevision allows separate local MCP and viewer processes to invalidate
+// static-frame backoff without sharing guest content or adding a host listener.
+func (l Local) ObservationRevision() string {
+	if c, ok := l.Controller.(interface{ ObservationRevision() string }); ok {
+		return c.ObservationRevision()
+	}
+	return ""
 }
