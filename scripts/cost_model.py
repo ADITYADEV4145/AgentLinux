@@ -54,7 +54,17 @@ def evaluate_prices(config, catalog):
     """
     import copy
     rows = []
-    for plan in catalog['plans']:
+    variants = []
+    for original in catalog['plans']:
+        variants.append({**original, 'billingOption': 'hourly'})
+        sub = original.get('subscription')
+        if sub:
+            hours = float(sub['includedHoursPerMonth'])
+            if not math.isfinite(hours) or hours <= 0:
+                raise ValueError('positive finite monthly hours required')
+            variants.append({**original, 'billingOption': 'monthly-full-allowance', 'hourly': sub['monthlyUSD'] / hours})
+            variants.append({**original, 'billingOption': 'annual-full-allowance', 'hourly': sub['annualUSD'] / (hours * 12)})
+    for plan in variants:
         price = float(plan['hourly'])
         if not math.isfinite(price) or price <= 0:
             raise ValueError('positive finite candidate price required')
@@ -69,7 +79,7 @@ def evaluate_prices(config, catalog):
             payments = price * scenario['payment_processing_fraction'] + scenario['payment_fixed_fee_per_invoice'] / scenario['mean_machine_hours_per_invoice']
             cost = result['cost_before_payment_per_hour'] + payments
             margin = (price - cost) / price
-            rows.append({'plan': plan['id'], 'scenario': scenario['name'],
+            rows.append({'plan': plan['id'], 'billingOption': plan['billingOption'], 'scenario': scenario['name'],
                          'estimate_only': True, 'candidate_price_per_hour': price,
                          'estimated_cost_including_payments_per_hour': cost,
                          'estimated_contribution_per_hour': price - cost,

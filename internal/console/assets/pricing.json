@@ -1,11 +1,47 @@
 {
-  "status": "proposed",
+  "status": "owner-selected-not-active",
   "currency": "USD",
   "updated": "2026-11-05",
-  "local": {"hourly": 0},
+  "local": {
+    "hourly": 0
+  },
   "plans": [
-    {"id": "desktop", "name": "Desktop", "cpus": 2, "memoryGiB": 4, "diskGiB": 24, "hourly": 0.59, "available": false},
-    {"id": "builder", "name": "Builder", "cpus": 4, "memoryGiB": 8, "diskGiB": 48, "hourly": 1.19, "available": false}
+    {
+      "id": "desktop",
+      "name": "Desktop",
+      "cpus": 2,
+      "memoryGiB": 4,
+      "diskGiB": 24,
+      "hourly": 1,
+      "available": false,
+      "subscription": {
+        "monthlyUSD": 20,
+        "annualUSD": 200,
+        "includedHoursPerMonth": 30,
+        "annualGrant": "monthly",
+        "rollover": false,
+        "overage": "stop-unless-explicitly-enabled",
+        "available": false
+      }
+    },
+    {
+      "id": "builder",
+      "name": "Builder",
+      "cpus": 4,
+      "memoryGiB": 8,
+      "diskGiB": 48,
+      "hourly": 2,
+      "available": false,
+      "subscription": {
+        "monthlyUSD": 40,
+        "annualUSD": 450,
+        "includedHoursPerMonth": 30,
+        "annualGrant": "monthly",
+        "rollover": false,
+        "overage": "stop-unless-explicitly-enabled",
+        "available": false
+      }
+    }
   ],
-  "note": "Proposed launch targets, not active rates or a paid offer. Builder is planned. Profit depends on utilization, streaming, support and provider terms. Current cloud console is development-only."
+  "note": "Owner-selected display prices. Cloud sales and subscriptions are not active. Annual plans are billed upfront and include 30 hours each month, not 30 hours for the entire year. Builder size and subscription entitlements remain planned. Profit depends on measured operating costs."
 }

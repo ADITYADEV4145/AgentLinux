@@ -1,35 +1,33 @@
-# Proposed launch pricing — not an active offer
+# Owner-selected pricing — cloud sales not active
 
-Proposal dated 2026-11-05. Local software usage stays free. Do not enable live billing, publish these as finalized prices, or promise profit based on this document. The editable website catalog is `internal/console/assets/pricing.json`; it does not modify the sandbox billing ledger or Stripe products.
+Selected by the owner on 2026-11-05. Local software usage stays free. Displaying these prices does not activate billing, create Stripe products or sell a functioning hosted subscription. The canonical editable catalog is `internal/console/assets/pricing.json`; it is separate from sandbox billing ledger rates.
 
-| Proposed size | Resource target | Candidate USD/hour | Ten hours |
-| --- | --- | --- | --- |
-| Desktop | 2 vCPU, 4 GiB RAM, 24 GiB ephemeral disk | $0.59 | $5.90 |
-| Builder (planned) | 4 vCPU, 8 GiB RAM, 48 GiB ephemeral disk | $1.19 | $11.90 |
+| Size | Resources | Pay as you go | Monthly | Annual |
+| --- | --- | --- | --- | --- |
+| Desktop | 2 vCPU, 4 GiB RAM, 24 GiB ephemeral disk target | $1/hour | $20 for 30 hours/month | $200 upfront for 30 hours/month |
+| Builder (planned) | 4 vCPU, 8 GiB RAM, 48 GiB ephemeral disk target | $2/hour | $40 for 30 hours/month | $450 upfront for 30 hours/month |
 
-These prices sell an agent/human desktop workflow, not raw CPU alone. No subscription or fictitious team tier. No active public free trial. Consider a one-time 15-minute Desktop trial only after abuse controls and a funded trial pool exist; never promise unlimited free compute. Local hardware, electricity and third-party agent/model costs remain the user's responsibility.
+Annual is interpreted as the same monthly allowance for twelve months: 360 hours total, released 30 each month, not all available upfront. Desktop saves $40/year versus twelve monthly payments; Builder saves $30/year. Unused hours do not roll over in the displayed policy. Allowances count aggregate machine-hours: two machines running one hour consume two hours. Larger-resource profiles and recurring subscription entitlements are still planned, not implemented checkout products.
 
-Proposed runtime semantics: per-second from verified ready until confirmed termination; idle time counts, failures before ready do not count as customer runtime. Provider provisioning/failure charges are our exposure. No persistent disk plan yet; stopped sessions discard guest data. Payment processing included in target; taxes additional where applicable. A measured streaming/egress allowance, visible pre-cap warnings and an enforceable stop policy must be chosen before sales. Until then no claim of unlimited bandwidth, no surprise network surcharge and no purchasable cloud CTA. Aggregate invoices/credits rather than separate card charges per short session; final funding/refund rules still need review.
+Selected annual effective prices at full allowance consumption are about $0.5556/hour Desktop and $1.25/hour Builder. Monthly equivalents are about $0.6667/hour and $1.3333/hour. Annual cash received upfront is not all earned profit: compute must still be provided throughout the term. Subscription proration, cancellation, refunds, renewal anchors, payment-failure handling and monthly grant accounting need implementation and tests before sale.
 
-## What would make this profitable?
+Proposed safety policy: stop at exhausted included hours unless the customer explicitly enables additional usage at the selected hourly rate. There is no automatic overage billing in this implementation. Runtime semantics remain per-second from verified ready until confirmed termination; idle counts, failure before ready does not. Ephemeral disk is included while running; stopped cloud sessions discard files. No persistent disk plan or active public trial. Payment processing is intended to be included in price; taxes additional where applicable. Bandwidth/streaming allowance and provider commercial rights must be resolved before sale; no unlimited-bandwidth promise.
 
-Use the existing editable scenarios, now with the exact website catalog:
+## Profit check before activation
 
 ```sh
 python3 scripts/cost_model.py --catalog internal/console/assets/pricing.json
 ```
 
-The model includes CPU, RAM, disk lifetime, streaming/other egress, provider overhead, trial/orphan waste, database/control plane, support, and payment fees. CPU/RAM/disk scale linearly for Builder; support/control assumptions remain fixed. All are assumptions, not measured bills or a contractual provider quote. Payment assumptions are 2.9% + $0.30 per aggregate invoice across ten machine-hours, not a verified Stripe quote.
+The model now evaluates hourly, monthly and annual options at full allowance consumption using the exact website catalog. It includes compute, RAM, disk, egress, overhead, trials/orphans, support, database/control plane and assumed processing fees. Subscription options retain the conservative existing invoice-fee allocation rather than pretending real merchant fees were validated.
 
-| Scenario | Desktop estimated cost/h including payments | Desktop estimated margin | Builder estimated cost/h | Builder estimated margin |
-| --- | ---: | ---: | ---: | ---: |
-| Low overhead / 2,000 billed hours monthly | $0.2745 | 53.5% | $0.4278 | 64.1% |
-| Base / 500 billed hours monthly | $0.7643 | **−29.5%** | $0.9319 | 21.7% |
-| High egress / 100 billed hours monthly | $5.0224 | **loss** | $5.2292 | **loss** |
+Under the low-overhead assumptions, Desktop annual revenue of about $0.5556/hour is above estimated costs. Under the base low-utilization scenario, that same annual price loses money. The higher $1 hourly rate does not remove annual-plan exposure. No price guarantees profit across utilization, support and streaming scenarios. Company expenses and taxes also need budgeting.
 
-Therefore $0.59 is an aggressive target, not a guaranteed profitable launch price. The current 60% model target is not met by Desktop even in the low-overhead case. A proposed **minimum 40% contribution margin gate** permits Desktop non-payment cost at most $0.30689/h with these fee assumptions; the base case fails. Company net profit additionally requires covering acquisition, engineering, legal, taxes and fixed expenses not comprehensively modeled here. Do not hide early low-utilization losses behind a raw-compute margin.
+Before selling, require measured costs below the revenue for every option at full usage, with a proposed minimum 40% contribution margin. Validate country-specific processing fees, average utilization, failed/orphaned provider resources, support and bounded egress. The tool always reports production activation as false. No catalog update changes existing sandbox reservations or invoice rate references.
 
-Before activating: run real provider measurements at representative utilization and stream activity; resolve commercial resale rights; include failed/orphaned compute; validate merchant-country fees/tax treatment; choose a bounded bandwidth policy; reject or raise prices if margin fails. Builder also needs an actual selectable provider profile and billing size validation before becoming available.
+## Receiving money
+
+See [Stripe bank/payout setup](stripe-payout-setup.md). Bank details belong in Stripe's secure Dashboard, not source code or this chat. Production activation and subscription implementation remain separate release gates.
 
 ## Official cost context and uncertainty
 

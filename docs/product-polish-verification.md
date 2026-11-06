@@ -40,3 +40,9 @@ Private screenshots under ignored `artifacts/product-polish/` include landing de
 ## Remaining gates
 
 No paid compute, public website, release artifact upload, live billing or production payment product was created. The multi-session cloud run used the fake provider; no real multi-VM cost/isolation/performance evidence exists yet. Public authentication/TLS/database/abuse controls, provider terms/permission, real cloud acceptance, validated profit/egress policy, actual Builder profile, signed distribution and authorization remain launch gates. These changes do not make a substantiated market-leadership claim. Persistent capture and improved terminal rendering remain the next performance experiments documented in the comparison.
+
+## Owner-selected pricing follow-up (2026-11-05)
+
+Replaced the earlier draft targets with $1/hour Desktop and $2/hour Builder, $20/$40 monthly plans with 30 machine-hours each month, and $200/$450 annual plans with the same monthly allowance. Annual charges are upfront; grants are monthly. The annual interpretation and no-rollover policy are explicit display policies; recurring subscriptions and grants are not implemented or activated. The cost model now evaluates all hourly/monthly/annual options at full allowance usage and retains loss-making cases.
+
+Verified host/guest builds, CLI tests, five Python cost-model tests and whitespace checks. Browser verification confirmed all six amounts, monthly allowance wording and annual savings; measured no horizontal overflow at 390px and visually reviewed the 1440px pricing layout. Private screenshot: `artifacts/product-polish/pricing-selected.png`, excluded from Git. Consulted official Stripe merchant activation and payout documentation; no account, bank details, payment products or live funds were changed. See `stripe-payout-setup.md`.

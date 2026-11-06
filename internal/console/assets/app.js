@@ -44,17 +44,28 @@ async function pricing() {
     const cards = [{name: 'Local', hourly: 0, local: true}, ...p.plans];
     $('prices').replaceChildren(...cards.map((plan, i) => {
       const card = node('article', undefined, 'price' + (i === 1 ? ' featured' : ''));
-      card.append(node('span', plan.local ? 'YOURS, ALWAYS' : (plan.id === 'builder' ? 'PLANNED SIZE · PROPOSED' : 'PROPOSED LAUNCH TARGET'), 'eyebrow'));
+      card.append(node('span', plan.local ? 'YOURS, ALWAYS' : (plan.id === 'builder' ? 'PLANNED SIZE · SELECTED PRICE' : 'SELECTED PRICE · NOT ON SALE'), 'eyebrow'));
       card.append(node('h3', plan.name));
       const amount = node('div', '$' + (plan.hourly === 0 ? '0' : plan.hourly.toFixed(2)), 'amount');
       amount.append(node('span', plan.local ? ' / software usage' : ' / machine-hour')); card.append(amount);
       const list = node('ul');
       for (const text of plan.local ? ['Runs on your Apple silicon Mac', 'Persistent Linux desktop', 'MCP + human control', 'Your hardware and energy costs apply'] :
-        [plan.cpus + ' vCPU · ' + plan.memoryGiB + ' GiB RAM', plan.diskGiB + ' GiB ephemeral disk target', 'Separate machine per task', 'No subscription required (proposed)']) list.append(node('li', text));
+        [plan.cpus + ' vCPU · ' + plan.memoryGiB + ' GiB RAM', plan.diskGiB + ' GiB ephemeral disk target', 'Separate machine per task', 'Pay as you go or choose a plan']) list.append(node('li', text));
       card.append(list);
+      if (plan.subscription) {
+        const sub = plan.subscription;
+        const options = node('div', undefined, 'plan-options');
+        const monthly = node('div');
+        monthly.append(node('strong', '$' + sub.monthlyUSD + ' / month'), node('span', sub.includedHoursPerMonth + ' machine-hours each month'));
+        const annual = node('div');
+        annual.append(node('strong', '$' + sub.annualUSD + ' / year'), node('span', sub.includedHoursPerMonth + ' hours/month · billed yearly'));
+        annual.append(node('small', 'Save $' + (sub.monthlyUSD * 12 - sub.annualUSD) + ' vs monthly · $' + (sub.annualUSD / 12).toFixed(2) + '/mo equivalent'));
+        options.append(monthly, annual);
+        card.append(options);
+      }
       const a = node('a', plan.local ? 'Start on your Mac ↗' : 'View cloud development →', 'button' + (i === 1 ? ' primary' : ''));
       a.href = plan.local ? 'https://github.com/ADITYADEV4145/AgentLinux#quick-start' : '/dashboard' + (capability ? '#' + capability : ''); card.append(a);
-      card.append(node('p', plan.local ? 'No hosted account required.' : 'Not on sale. Costs and margin unvalidated.', 'fine'));
+      card.append(node('p', plan.local ? 'No hosted account required.' : 'Cloud sales and subscriptions are not active.', 'fine'));
       return card;
     }));
   } catch { $('prices').textContent = 'Pricing unavailable. Local software usage is free; no paid cloud offer is active.'; }

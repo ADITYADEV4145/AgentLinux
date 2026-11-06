@@ -30,7 +30,16 @@ class CandidatePriceTests(unittest.TestCase):
         rows = evaluate_prices(config, catalog)
         desktop = [r for r in rows if r['plan'] == 'desktop']
         self.assertTrue(desktop[0]['profitable_under_these_assumptions'])
-        self.assertFalse(desktop[1]['profitable_under_these_assumptions'])
+        self.assertFalse(desktop[2]['profitable_under_these_assumptions'])
         self.assertTrue(all(not r['production_activation_allowed'] for r in rows))
         catalog['plans'][0]['hourly'] = float('nan')
         with self.assertRaises(ValueError): evaluate_prices(config, catalog)
+
+    def test_subscription_full_usage_effective_prices(self):
+        from cost_model import evaluate_prices
+        root = Path(__file__).resolve().parents[1]
+        rows = evaluate_prices(json.loads((root/'examples/cost-model.json').read_text()), json.loads((root/'internal/console/assets/pricing.json').read_text()))
+        annual = next(r for r in rows if r['plan'] == 'desktop' and r['billingOption'] == 'annual-full-allowance')
+        self.assertAlmostEqual(annual['candidate_price_per_hour'], 200 / 360)
+        annual_base = next(r for r in rows if r['plan'] == 'desktop' and r['billingOption'] == 'annual-full-allowance' and r['scenario'] == 'base-assumptions-not-measurements')
+        self.assertFalse(annual_base['profitable_under_these_assumptions'])
