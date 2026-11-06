@@ -133,6 +133,22 @@ func (c *Client) request(ctx context.Context, method, path, key string, body, re
 	}
 	return nil
 }
+func (c *Client) List(ctx context.Context) (Fleet, error) {
+	var f Fleet
+	err := c.request(ctx, "GET", "/v1/sessions", "", nil, &f)
+	return f, err
+}
+
+// ForSession shares the connection pool, never mutable session selection.
+func (c *Client) ForSession(id string) (*Client, error) {
+	if !protocol.ValidID(id) {
+		return nil, protocol.Fail("INVALID_ARGUMENT", "invalid session ID")
+	}
+	copy := *c
+	copy.Config.Session = id
+	return &copy, nil
+}
+
 func (c *Client) Create(ctx context.Context, key string, seconds int) (Session, error) {
 	var s Session
 	e := c.request(ctx, "POST", "/v1/sessions", key, Create{c.Config.Workspace, seconds, "desktop"}, &s)

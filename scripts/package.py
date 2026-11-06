@@ -62,7 +62,7 @@ def main():
     for name in ['LICENSE', 'README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'go.mod', 'go.sum']:
         copy_reviewed(repo, name, bundle)
     # Never sweep ignored local notes, keys, downloads or editor files into a bundle.
-    paths = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', 'docs', 'third_party', 'examples', 'images', 'internal/mcpserver/instructions.txt', 'scripts/cost_model.py', 'scripts/billing_acceptance.py'], cwd=repo, text=True).split('\0')
+    paths = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', 'docs', 'third_party', 'examples', 'images', 'internal/mcpserver/instructions.txt', 'internal/console/assets/pricing.json', 'scripts/cost_model.py', 'scripts/billing_acceptance.py'], cwd=repo, text=True).split('\0')
     for name in sorted(set(paths) - {''}):
         copy_reviewed(repo, name, bundle)
     copy_reviewed(repo, 'scripts/install.py', bundle)

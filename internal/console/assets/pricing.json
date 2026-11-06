@@ -1,0 +1,11 @@
+{
+  "status": "proposed",
+  "currency": "USD",
+  "updated": "2026-11-05",
+  "local": {"hourly": 0},
+  "plans": [
+    {"id": "desktop", "name": "Desktop", "cpus": 2, "memoryGiB": 4, "diskGiB": 24, "hourly": 0.59, "available": false},
+    {"id": "builder", "name": "Builder", "cpus": 4, "memoryGiB": 8, "diskGiB": 48, "hourly": 1.19, "available": false}
+  ],
+  "note": "Proposed launch targets, not active rates or a paid offer. Builder is planned. Profit depends on utilization, streaming, support and provider terms. Current cloud console is development-only."
+}

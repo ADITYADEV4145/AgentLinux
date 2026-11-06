@@ -46,11 +46,48 @@ def calculate(config):
     return results
 
 
+def evaluate_prices(config, catalog):
+    """Stress-test targets from the same catalog shown by the local website.
+
+    This assumes linear CPU/RAM/disk infrastructure scaling. Support and control
+    assumptions remain unchanged. It is an estimate, never an activation path.
+    """
+    import copy
+    rows = []
+    for plan in catalog['plans']:
+        price = float(plan['hourly'])
+        if not math.isfinite(price) or price <= 0:
+            raise ValueError('positive finite candidate price required')
+        for original in config['scenarios']:
+            scenario = copy.deepcopy(original)
+            for source, target in [('cpus', 'cpus'), ('memoryGiB', 'memory_gib'), ('diskGiB', 'disk_gib')]:
+                size = float(plan[source])
+                if not math.isfinite(size) or size <= 0:
+                    raise ValueError('positive finite machine size required')
+                scenario[target] = size
+            result = calculate({'scenarios': [scenario]})[0]
+            payments = price * scenario['payment_processing_fraction'] + scenario['payment_fixed_fee_per_invoice'] / scenario['mean_machine_hours_per_invoice']
+            cost = result['cost_before_payment_per_hour'] + payments
+            margin = (price - cost) / price
+            rows.append({'plan': plan['id'], 'scenario': scenario['name'],
+                         'estimate_only': True, 'candidate_price_per_hour': price,
+                         'estimated_cost_including_payments_per_hour': cost,
+                         'estimated_contribution_per_hour': price - cost,
+                         'estimated_margin_fraction': margin,
+                         'profitable_under_these_assumptions': margin > 0,
+                         'meets_target_margin': margin >= scenario['target_gross_margin'],
+                         'production_activation_allowed': False})
+    return rows
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--config', type=Path, default=Path(__file__).resolve().parents[1] / 'examples/cost-model.json')
+    p.add_argument('--catalog', type=Path, help='optional proposed website pricing catalog; stress-test each target')
     args = p.parse_args()
-    print(json.dumps(calculate(json.loads(args.config.read_text())), indent=2, allow_nan=False))
+    config = json.loads(args.config.read_text())
+    result = evaluate_prices(config, json.loads(args.catalog.read_text())) if args.catalog else calculate(config)
+    print(json.dumps(result, indent=2, allow_nan=False))
 
 
 if __name__ == '__main__':

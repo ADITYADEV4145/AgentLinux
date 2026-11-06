@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/ADITYADEV4145/AgentLinux/internal/billing"
 	"slices"
+	"sort"
 	"sync"
 	"time"
 
@@ -175,6 +176,50 @@ func (m *Manager) Create(i Identity, key string, q Create) (Session, error) {
 	}
 	return s, nil
 }
+
+// Fleet is an authorized, bounded snapshot. It never extends a session's idle deadline.
+type Fleet struct {
+	Sessions []Session `json:"sessions"`
+	Limits   Limits    `json:"limits"`
+}
+
+func (m *Manager) List(i Identity) (Fleet, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cur, ok := m.db.Identities[i.ID]
+	if m.poisoned || !ok || cur.Revoked || cur.TokenHash != i.TokenHash || !m.now().Before(cur.Expires) {
+		return Fleet{}, protocol.Fail("UNAUTHORIZED", "credential unavailable, expired or revoked")
+	}
+	result := Fleet{Sessions: []Session{}, Limits: m.db.Limits}
+	for _, original := range m.db.Sessions {
+		if original.Owner != cur.ID || original.Workspace != cur.Workspace {
+			continue
+		}
+		s := original
+		limits := m.db.Limits
+		s.Policy = &limits
+		if m.db.Billing != nil {
+			s.Billing = m.db.Billing.SessionCost(s.ID)
+		}
+		s.EstimatedSeconds = s.ObservedSeconds
+		if active(s) {
+			s.EstimatedSeconds = max(0, int64(m.now().Sub(s.Created).Seconds()))
+		}
+		s.IdleStopAt = s.LastAction.Add(time.Duration(limits.IdleSeconds) * time.Second)
+		if s.IdleStopAt.After(s.Expires) {
+			s.IdleStopAt = s.Expires
+		}
+		result.Sessions = append(result.Sessions, s)
+	}
+	sort.Slice(result.Sessions, func(a, b int) bool {
+		if result.Sessions[a].Created.Equal(result.Sessions[b].Created) {
+			return result.Sessions[a].ID < result.Sessions[b].ID
+		}
+		return result.Sessions[a].Created.After(result.Sessions[b].Created)
+	})
+	return result, nil
+}
+
 func (m *Manager) Get(i Identity, id string) (Session, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

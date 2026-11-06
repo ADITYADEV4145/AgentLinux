@@ -16,6 +16,15 @@ import (
 // Init creates random, expiring development identities, not production accounts.
 // API credentials are stored hashed; client files are private bearer credentials.
 func Init(root, endpoint, provider string) (map[string]string, error) {
+	return InitWithLimits(root, endpoint, provider, DefaultLimits())
+}
+
+// InitWithLimits changes only a fresh deployment; billing concurrency still applies.
+func InitWithLimits(root, endpoint, provider string, limits Limits) (map[string]string, error) {
+	if !limits.valid() {
+		return nil, errors.New("invalid cloud resource limits")
+	}
+
 	if provider != "fake-development" && provider != "e2b-desktop-2.7.2" {
 		return nil, errors.New("select fake-development or e2b-desktop-2.7.2")
 	}
@@ -31,7 +40,7 @@ func Init(root, endpoint, provider string) (map[string]string, error) {
 			return nil, errors.New("cloud init requires a fresh empty namespace; never use local VM or user-data directories")
 		}
 	}
-	db := Database{Version: Version, Deployment: protocol.ID(), Provider: provider, Limits: DefaultLimits(), Identities: map[string]Identity{}, Sessions: map[string]Session{}}
+	db := Database{Version: Version, Deployment: protocol.ID(), Provider: provider, Limits: limits, Identities: map[string]Identity{}, Sessions: map[string]Session{}}
 	result := map[string]string{}
 	for _, name := range []string{"alice", "bob"} {
 		raw := make([]byte, 32)

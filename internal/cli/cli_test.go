@@ -117,3 +117,19 @@ func TestStartRejectsBadMetricsBeforeCreatingState(t *testing.T) {
 		t.Fatal(errout.String())
 	}
 }
+
+func TestBareCommandIsHelpOutsideInteractiveTerminalAndDashboardHelp(t *testing.T) {
+	for _, args := range [][]string{nil, {"dashboard", "--help"}} {
+		var out, errout bytes.Buffer
+		if code := Run(context.Background(), args, &out, &errout); code != 0 {
+			t.Fatalf("%v: %d %s", args, code, errout.String())
+		}
+		if out.Len()+errout.Len() == 0 {
+			t.Fatal("missing useful help")
+		}
+	}
+	var out, errout bytes.Buffer
+	if Run(context.Background(), []string{"dashboard", "--unknown"}, &out, &errout) == 0 {
+		t.Fatal("invalid dashboard flag")
+	}
+}

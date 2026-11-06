@@ -11,7 +11,7 @@ def check(bundle):
     metadata=install.manifest(bundle)
     required={'examples/demo/project-budget.html','examples/cost-model.json','examples/billing.sandbox.json',
               'images/debian/manifest.json','scripts/cost_model.py','scripts/billing_acceptance.py',
-              'internal/mcpserver/instructions.txt','third_party/stripe-go.LICENSE','docs/launch-readiness.md'}
+              'internal/mcpserver/instructions.txt','internal/console/assets/pricing.json','docs/web-console.md','third_party/stripe-go.LICENSE','docs/launch-readiness.md'}
     if not required <= metadata['files'].keys():
         raise ValueError('package lacks documented first-run supporting files')
     # Deep development source links require the source checkout, as documented.

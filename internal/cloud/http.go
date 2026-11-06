@@ -134,6 +134,8 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if e == nil {
 			result, e = a.Manager.BillingAction(who, q.RequestID, q.Action, q.Confirm)
 		}
+	case r.URL.Path == "/v1/sessions" && r.Method == "GET":
+		result, e = a.Manager.List(who)
 	case r.URL.Path == "/v1/sessions" && r.Method == "POST":
 		var q Create
 		e = decode(r, &q)

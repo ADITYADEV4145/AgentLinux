@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ADITYADEV4145/AgentLinux/internal/machine"
+	"golang.org/x/term"
 	"io"
 	"os"
 	"path/filepath"
@@ -31,6 +32,7 @@ import (
 const Help = `agent-linux: an agent-ready Linux machine (local developer release candidate)
 
 Usage: agent-linux COMMAND [options]
+  dashboard       Local web console; optional private development cloud config
   doctor          Read-only host, runtime and resource diagnostics
   start           Start/resume Linux and open its interactive viewer (NAT)
   cloud           Development cloud prototype; explicit provider opt-in
@@ -262,6 +264,16 @@ type Envelope struct {
 }
 
 func Run(ctx context.Context, args []string, out, errout io.Writer) int {
+	// No implicit boot when piped, scripted or invoked by a noninteractive client.
+	if len(args) == 0 {
+		if f, ok := out.(*os.File); ok && term.IsTerminal(int(f.Fd())) && term.IsTerminal(int(os.Stdin.Fd())) {
+			return runStart(ctx, nil, out, errout)
+		}
+	}
+	if len(args) > 0 && args[0] == "dashboard" {
+		return runDashboard(ctx, args[1:], out, errout)
+	}
+
 	if len(args) > 0 && (args[0] == "delete" || args[0] == "reset") {
 		return runDestructive(ctx, args, out, errout)
 	}

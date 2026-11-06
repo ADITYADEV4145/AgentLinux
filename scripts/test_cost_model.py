@@ -20,3 +20,17 @@ class CostModelTests(unittest.TestCase):
     def test_impossible_margin_rejected(self):
         self.config['scenarios'][0]['target_gross_margin']=1
         with self.assertRaises(ValueError): calculate(self.config)
+
+class CandidatePriceTests(unittest.TestCase):
+    def test_low_cost_profit_is_not_a_general_profit_guarantee(self):
+        from cost_model import evaluate_prices
+        root = Path(__file__).resolve().parents[1]
+        config = json.loads((root/'examples/cost-model.json').read_text())
+        catalog = json.loads((root/'internal/console/assets/pricing.json').read_text())
+        rows = evaluate_prices(config, catalog)
+        desktop = [r for r in rows if r['plan'] == 'desktop']
+        self.assertTrue(desktop[0]['profitable_under_these_assumptions'])
+        self.assertFalse(desktop[1]['profitable_under_these_assumptions'])
+        self.assertTrue(all(not r['production_activation_allowed'] for r in rows))
+        catalog['plans'][0]['hourly'] = float('nan')
+        with self.assertRaises(ValueError): evaluate_prices(config, catalog)

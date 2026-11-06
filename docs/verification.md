@@ -484,3 +484,7 @@ Second run: Chrome 156.0.8078.80 in a new isolated headless profile loaded real 
 Executed `make build test check` under Go 1.26.9; meaningful added CLI test verifies a relative metrics destination fails before VM state creation. The build patch was selected from official Go downloads and fetched through Go checksum-authenticated toolchain support into the workspace cache; no system Go/PATH was changed. Packaging now includes supporting examples/data/helper scripts. Final committed-package manifest/hash, file inventory, README/billing links, third-party notices and CI are checked separately after source commit. The tested private bundles disclose `dirty:true`; they are not signed/public release artifacts.
 
 Read-only repository checks found no open GitHub issues; private vulnerability-reporting query returned 404, so availability remains unconfirmed. No settings/issues/posts/messages/release/tag/media upload/public infrastructure or live billing changes were made. Draft launch materials, cloud checklist, known issues, contributor roadmap and authorization boundaries are in [launch readiness](launch-readiness.md). Real cloud/Stripe-hosted acceptance, clean-Mac/signing/security/legal/operations gates remain open.
+
+## Product console and local responsiveness follow-up
+
+See [product-polish-verification.md](product-polish-verification.md) for the actual Mac/guest/browser checks and limitations. Existing phase reports retain their original scope; the new proposed prices do not replace configured sandbox ledger rates.

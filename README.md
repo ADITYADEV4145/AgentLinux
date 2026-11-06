@@ -35,6 +35,16 @@ python3 scripts/install.py \
 
 Use the printed executable path or deliberately configure PATH yourself. The bundle is publisher-unsigned/ad-hoc and **not notarized**. The installer verifies local file hashes and switches versions atomically; it never fetches binaries. Checksums alone do not prove publisher authenticity. [Packaging, upgrades and uninstall](docs/release.md).
 
+## One command to open Linux
+
+After installing the tool and Lima 2.2.1, with both executables on PATH:
+
+```sh
+agent-linux
+```
+
+In an interactive terminal this starts/resumes Linux, waits for the guest desktop, and opens the interactive viewer. Kitty shows graphics in the terminal; other terminals get a private live browser URL. **F2** hands control to/from agents; **Ctrl+]** exits Kitty without stopping Linux. First setup still downloads/provisions the guest. It starts Linux, not Microsoft Windows. Outside an interactive terminal, the bare command prints help; use explicit `agent-linux start` in scripts.
+
 ## Quick start: two terminals
 
 Terminal A, in Kitty (or open the private browser URL printed by the fallback):
@@ -107,3 +117,15 @@ Start with `doctor`, `status --json`, bounded `logs --backend` and [troubleshoot
 [Architecture](docs/architecture.md) · [Verification](docs/verification.md) · [Contributor roadmap](docs/contributor-roadmap.md) · [Contributing](CONTRIBUTING.md) · [Known issues](docs/known-issues.md).
 
 Original repository code, including the development control plane and adapter code, is **Apache-2.0**: [license](LICENSE). External runtimes, SDKs, browsers and guest packages retain their own [licenses/notices](third_party/README.md). No Lima/Kitty/compiler/browser/VM image or operated hosted service is bundled. A future managed service may be paid; its availability, pricing and any separately developed proprietary components must be disclosed explicitly. Open-source adapter code does not make an external provider's infrastructure open source.
+
+## Website and multiple cloud sessions
+
+```sh
+agent-linux dashboard
+# Attach an existing private development cloud identity:
+agent-linux dashboard --cloud-config /absolute/private/alice.json
+```
+
+Open the printed local URL. The responsive console lists only your sessions, shows limits/usage, creates bounded desktops, opens their individual human/agent viewers and explicitly stops selected machines. A fresh development deployment can opt into two sessions per account. The default provider is **SIMULATED**, and real hosted cloud acceptance remains pending. [Console setup and boundaries](docs/web-console.md).
+
+The landing page proposes **$0.59/h Desktop** and **$1.19/h Builder (planned)**. These are editable launch targets, not active prices or guaranteed profit; the stress model exposes loss-making scenarios. [Pricing assumptions and activation gate](docs/pricing-targets.md). No website, paid service or public release was deployed. [Source comparison with terminal-mac](docs/terminal-mac-comparison.md) and [follow-up verification](docs/product-polish-verification.md).

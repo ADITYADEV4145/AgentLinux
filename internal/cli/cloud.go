@@ -27,6 +27,7 @@ func runCloud(ctx context.Context, args []string, out, errout io.Writer) int {
   init     Create two random 8-hour DEVELOPMENT identities (no provider calls)
   serve    Run the DEVELOPMENT control plane on literal 127.0.0.1 only
   up       Create one ephemeral session, write a NEW private client config, wait ready
+  list     List only this identity/workspace’s sessions and enforced limits
   status   Show authenticated session metadata, expiry, limits and capabilities
   stop     Terminate the selected ephemeral machine; guest data is discarded
   revoke   Revoke this development identity and stop all its active sessions
@@ -44,6 +45,7 @@ Fake provider is SIMULATED, not a Linux desktop. No live billing or cloud login.
 	listen := f.String("listen", "127.0.0.1:8787", "serve: literal IPv4 loopback only")
 	provider := f.String("provider", "fake-development", "init/serve: fake-development or e2b-desktop-2.7.2")
 	stripeEnabled := f.Bool("stripe-sandbox", false, "serve: explicitly enable sandbox Stripe SDK; requires server-only test key/signing secret/return URL")
+	perOwner := f.Int("max-per-owner", 1, "init: simultaneous sessions per identity, 1..2; billing may impose a lower limit")
 	dev := f.Bool("dev", false, "explicitly enable development identities/control plane")
 	allow := f.Bool("allow-provider-create", false, "operator opt-in to real E2B API calls; may incur charges; never implicit")
 	python := f.String("python", "", "E2B: absolute Python 3.11+ venv executable with reviewed SDK installed")
@@ -75,7 +77,9 @@ Fake provider is SIMULATED, not a Linux desktop. No live billing or cloud login.
 		}
 		defer unlock()
 		if action == "init" {
-			files, e := cloud.Init(private, *endpoint, *provider)
+			limits := cloud.DefaultLimits()
+			limits.MaxPerOwner = *perOwner
+			files, e := cloud.InitWithLimits(private, *endpoint, *provider, limits)
 			if e != nil {
 				return fail(e)
 			}
@@ -166,6 +170,12 @@ Fake provider is SIMULATED, not a Linux desktop. No live billing or cloud login.
 		return fail(e)
 	}
 	switch action {
+	case "list":
+		s, e := c.List(ctx)
+		if e != nil {
+			return fail(e)
+		}
+		return emit(s)
 	case "status":
 		s, e := c.Session(ctx)
 		if e != nil {

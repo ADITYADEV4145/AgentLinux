@@ -75,3 +75,9 @@ The earlier Phase 6 deferral is superseded by this implementation. Stripe-hosted
 ## Phase 8 — local preview and launch preparation
 
 Installed-product real-Mac review, patch toolchain revalidation, native agent/form recording, secure web human acceptance, measured local timings/resources, first-run/doc/package fixes and draft launch materials are prepared. No release/announcement/deployment/paid activation is authorized by this milestone. Follow [launch readiness](launch-readiness.md), [known issues](known-issues.md) and the [contributor roadmap](contributor-roadmap.md).
+
+## Product console follow-up (2026-11-05)
+
+Implemented: interactive bare-command launcher; private cross-process viewer invalidation; owner-scoped account inventory and fresh-deployment opt-in concurrency two; original responsive landing page and localhost console with real backend session actions and viewer handoff; configured candidate pricing and stress-model evaluation. See `web-console.md`, `pricing-targets.md`, `terminal-mac-comparison.md` and `product-polish-verification.md`.
+
+Still gated: persistent capture transport and measured renderer optimizations; public signed/notarized distribution; real multi-session provider acceptance/commercial rights; production identity/TLS/database/abuse prevention; validated margins/bandwidth policy; Builder provider profile; live billing; public hosting/launch authorization. The console adds no invented working cloud backend.
