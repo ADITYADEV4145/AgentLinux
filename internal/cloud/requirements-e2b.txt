@@ -1,0 +1,3 @@
+# Optional, operator-reviewed environment only. No automatic installation.
+# Primary SDK source/license verified; complete transitive lock/audit is pending.
+e2b-desktop==2.7.2

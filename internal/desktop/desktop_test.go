@@ -130,7 +130,7 @@ func TestDesktopRequiresPanelAndApplicationRouting(t *testing.T) {
 	d, _, commands := fixture(t)
 	original = d.run
 	d.run = func(ctx context.Context, name string, args ...string) (process.Result, error) {
-		if len(args) > 0 && args[0] == "search" {
+		if len(args) > 0 && (args[0] == "search" || args[0] == "getwindowfocus") {
 			return process.Result{Out: []byte("12345\n")}, nil
 		}
 		return original(ctx, name, args...)
@@ -140,5 +140,19 @@ func TestDesktopRequiresPanelAndApplicationRouting(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(*commands, "\n"), "windowactivate --sync 12345") {
 		t.Fatal("existing window not activated", *commands)
+	}
+}
+
+func TestActivationRefusesUnverifiedKeyboardFocus(t *testing.T) {
+	d, _, commands := fixture(t)
+	if e := d.activate(context.Background(), "12345"); e == nil {
+		t.Fatal("activation accepted without observed focus")
+	}
+	joined := strings.Join(*commands, "\n")
+	if !strings.Contains(joined, "windowfocus --sync 12345") || !strings.Contains(joined, "getwindowfocus") {
+		t.Fatal(joined)
+	}
+	if e := d.activate(context.Background(), "123;touch /tmp/host"); e == nil {
+		t.Fatal("malformed window identity")
 	}
 }

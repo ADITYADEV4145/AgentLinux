@@ -140,3 +140,6 @@ func (h *Hub) WaitIdle(ctx context.Context) error {
 		return ctx.Err()
 	}
 }
+
+// Invalidate requests a fresh observation after human input; no mutation is replayed.
+func (h *Hub) Invalidate() { h.mu.Lock(); h.next = time.Time{}; h.mu.Unlock() }

@@ -421,3 +421,33 @@ First acceptance: complete steps 1–9 three consecutive times on a recorded Mac
 ## Phase 0 final check record
 
 Documentation check passed for all 10 Markdown files: required deliverables exist, relative links resolve, code fences balance, no trailing whitespace or private home-path/email patterns were found. Staged checks also passed across 11 allowed text files: git diff --cached --check, credential/private-key/token patterns, private paths/email patterns and attribution-trailer checks. These are bounded pattern checks, not proof that every possible secret format is detectable. No product tests were run. Commit attribution uses the repository owner’s GitHub handle and noreply address rather than a private email, with no AI attribution trailers. The completion report gives the commit hash and post-commit git status; this file cannot embed its own final commit hash without changing that hash.
+
+## Phase 6 development verification (2026-11-05)
+
+Scope: development cloud prototype plus single-command local startup and human input. No paid provider API, public deployment or billing integration was exercised. Tests using `fake-development` are simulations, never evidence of cloud Linux.
+
+Automated: `make test check` runs Go race tests, vet, installer checks and offline Python SDK doubles. New tests cover authenticated HTTP machine operations through an official MCP client, capability filtering, every cross-user session route, concurrent duplicate creation, lost allocation reply, inventory recovery/orphans, provider outage/deadline, resource rejection/confirmed deletion, revocation, TTL/idle/budget enforcement, private credential paths, corrupted identity state, input ownership/restarts, incremental Unicode/bracketed paste, terminal-cell mapping and authenticated web input. Python doubles verify exact SDK create metadata/idempotency/TTL/network flags and compile the embedded guest runner without importing a real provider SDK. They do not validate a provider's promises.
+
+A separate actual CLI loopback smoke test ran `cloud init → serve → up → status → stop`, observed authenticated ready/stopped state and removed its newly generated private test credentials. Provider was SIMULATED and no resource was created. Official SDK-over-HTTP integration is covered by `TestOfficialMCPClientThroughDevelopmentCloud`; this is different from the existing real local stdio MCP acceptance.
+
+Real Mac observations: Apple M4 Pro, macOS 26.5 (25F71), Lima 2.2.1/VZ, Kitty 0.50.0; disposable new 2-CPU/4-GiB/24-GiB Debian ARM64/Xfce workstation, helper 0.6.0, protocol 2.0. Repeated runs of `scripts/interactive_terminal_acceptance.py` demonstrated one `start` command booting the actual VM and obtaining the desktop/input lease, real terminal images, exclusion of agent mutations during human ownership, exact editor ASCII/Unicode/emoji file bytes, q as text, automatic terminal paste, guest shell operation and Ctrl+C remaining guest input, then terminal SGR click mapped through actual placement and Unicode browser form submission. These were programmatically injected PTY events in an isolated Kitty window, not a physical human or an AI-model completion. No Mac pointer or clipboard was used.
+
+Early failures are retained privately in ignored `artifacts/phase6`: the first run exposed status-lock starvation (changed to bounded wait); a driver oracle needed to poll an asynchronously created file; later human-path passes exposed an acceptance assumption about navigating a browser handed over fullscreen. The revised MCP test observes the guest fullscreen state and exits it before using browser chrome. Guest activation now verifies actual keyboard focus. The final hardware run below passed the revised acceptance; the earlier failures remain recorded rather than being discarded.
+
+Repeat on a supported unlocked Mac, after `make build`:
+
+```sh
+python3 scripts/interactive_terminal_acceptance.py \
+ --cli "$PWD/bin/agent-linux" --lima /absolute/reviewed/limactl \
+ --kitty /absolute/kitty.app/Contents/MacOS/kitty \
+ --kitten /absolute/kitty.app/Contents/MacOS/kitten \
+ --evidence "$PWD/artifacts/phase6/interactive-new"
+```
+
+The script creates its own `/private/tmp/agentlinux-phase6-acceptance-*` namespace, waits for real readiness, tests human/MCP handoff, resizes, verifies terminal restoration and VM survival, then stops/deletes only that selected disposable VM. Evidence contains local paths and stays untracked. First-boot timings include variable image/APT downloads and are observations, not startup or frame-rate promises. A clean-Mac installer walkthrough, physical keyboard/IME coverage, real paid cloud tests, provider commercial approval, and production remote ingress remain pending. See [provider acceptance checklist](cloud.md).
+
+Final real-Mac result: **PASS**, private evidence `artifacts/phase6/interactive6/report.json` and `mcp.txt`. Fresh local VM used the pinned public Debian base already cached and hash-verified; remaining provisioning used normal package downloads. Boot through desktop image and human ownership took **139.96 seconds** on this machine in this run, not a general timing guarantee. Guest helper 0.6.0, protocol 2.0, actual Linux ARM64, one 1280×800 X11 display. Human editor/terminal/browser actions passed, then the official SDK stdio MCP test passed in **30.03 seconds** against the same guest while the terminal viewer remained open. The agent observed `_NET_WM_STATE_FULLSCREEN`, sent guest F11, navigated and verified the changed browser title/screenshot. Focus diagnostics confirmed the actual Chromium guest window.
+
+Resize to 80×30 and Ctrl+] exit passed. Canonical input worked afterwards; all persistent termios values matched. Darwin's transient PENDIN bit cleared on the next input, after which exact `stty -g` matched. DECRQM queries confirmed modes 1000/1006/2004 were reset before and after. The VM remained ready and the input lease was absent after viewer exit. The test subsequently stopped and deleted its exact owned VM; only the ownership marker/lock remain. The existing `workstation55-demo` VM was not controlled, stopped or migrated. One interrupted later download attempt created no VM; its known partial download and namespace state were separately cleaned through guarded deletion.
+
+Human web input has automated authorization/validation/routing coverage; the newly added browser control widgets have not had a real-Linux browser interaction acceptance run. Earlier Chrome 156 view-only fallback acceptance remains valid for observation. Continuous human drag/IME and physical-keyboard coverage are pending. No provider-dependent result is inferred from any local or simulated test.

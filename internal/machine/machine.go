@@ -71,3 +71,16 @@ func (l Local) Open(ctx context.Context, app string) error {
 }
 
 var _ Machine = Local{}
+
+// InputControl is optional. Viewers must refuse interactive mode when absent.
+type InputControl interface {
+	ControlLease(context.Context, string, string) error
+}
+
+func (l Local) ControlLease(ctx context.Context, action, generation string) error {
+	c, ok := l.Controller.(InputControl)
+	if !ok {
+		return protocol.Fail("UNSUPPORTED_OPERATION", "backend has no input ownership")
+	}
+	return c.ControlLease(ctx, action, generation)
+}

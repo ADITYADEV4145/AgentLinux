@@ -68,3 +68,21 @@ func TestInstalledLauncherFindsVersionedGuest(t *testing.T) {
 		t.Fatal("launcher helper discovery", got)
 	}
 }
+
+func TestStartHelpAndInvalidArguments(t *testing.T) {
+	for _, args := range [][]string{{"start", "--help"}, {"cloud", "--help"}} {
+		var out, errout bytes.Buffer
+		if code := Run(context.Background(), args, &out, &errout); code != 0 {
+			t.Fatal(code, errout.String())
+		}
+		if out.Len()+errout.Len() == 0 {
+			t.Fatal("missing help")
+		}
+	}
+	for _, args := range [][]string{{"start", "unexpected"}, {"start", "--cloud-config", "/nonexistent", "--cpus", "4"}, {"cloud", "serve", "--listen", "0.0.0.0:8787"}} {
+		var out, errout bytes.Buffer
+		if code := Run(context.Background(), args, &out, &errout); code == 0 {
+			t.Fatal("invalid input accepted", args)
+		}
+	}
+}

@@ -81,7 +81,36 @@ func TestRealStdioGuest(t *testing.T) {
 	if !v.OK {
 		t.Fatal(v)
 	}
+	if os.Getenv("AGENTLINUX_ACCEPT_FOCUS_DEBUG") != "" {
+		for _, argv := range [][]string{{"/usr/bin/xdotool", "getactivewindow", "getwindowname"}, {"/usr/bin/xdotool", "getwindowfocus", "getwindowname"}, {"/usr/bin/xprop", "-root", "_NET_ACTIVE_WINDOW", "_NET_CLIENT_LIST_STACKING"}} {
+			_, diagnostic := call(t, session, "computer_run_command", map[string]any{"argv": argv})
+			t.Logf("focus diagnostic %v: %+v", argv, diagnostic)
+		}
+	}
 	frame := snap("mcp-browser")
+	// A human may hand over a fullscreen browser. Observe its guest window
+	// state and reveal browser chrome before navigating; do not assume Ctrl+L
+	// works in every fullscreen mode.
+	_, windowState := call(t, session, "computer_run_command", map[string]any{"argv": []string{"/bin/sh", "-c", "xprop -id $(xdotool getactivewindow) _NET_WM_STATE"}})
+	if !windowState.OK {
+		t.Fatal(windowState)
+	}
+	if data, ok := windowState.Data.(map[string]any); ok {
+		encoded, _ := data["stdout"].(string)
+		states, err := base64.StdEncoding.DecodeString(encoded)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("observed guest browser state: %s", states)
+		if strings.Contains(string(states), "_NET_WM_STATE_FULLSCREEN") {
+			_, result := call(t, session, "computer_key", map[string]any{"frameId": frame, "key": "F11"})
+			if !result.OK {
+				t.Fatal(result)
+			}
+			time.Sleep(300 * time.Millisecond)
+			frame = snap("mcp-browser-unfullscreen")
+		}
+	}
 	_, v = call(t, session, "computer_key", map[string]any{"frameId": frame, "key": "CTRL+L"})
 	if !v.OK {
 		t.Fatal(v)

@@ -90,3 +90,9 @@ The future viewer must implement human takeover that revokes the agent input lea
 ## Measurable success
 
 Acceptance requires the scripted offline form task and persistence test to pass in three consecutive runs on a recorded real Mac configuration. Record cold provisioning and warm readiness time, screenshot round-trip p50/p95, frame age, input dispatch latency, CPU/RSS, disk growth, bytes transferred, and viewer achieved refresh rate. Record failures as well as successes. No published minimum hardware requirement, startup-time claim, or frame-rate promise until measured. The terminal viewer should remain responsive while frames are dropped under load; exact performance gates are selected from Phase 1/3 measurements.
+
+## Phase 6 increment
+
+One-command local experience: `agent-linux start` resumes/creates Linux and opens interactive Kitty (secure local web fallback elsewhere). Humans and agents share the desktop with explicit input handoff; Ctrl+] exits while Linux remains running. This retains a complete Debian/Xfce workstation, not a separate reduced cloud shell.
+
+Development cloud sessions share the machine/MCP/viewer contract but advertise differences. The default fixture is simulated; optional E2B execution is not provider-accepted. Cloud sessions are ephemeral, bounded and authenticated; no billing/public service, account signup, cloud files, team features or durable home are offered. Provider commercial authorization and real network/desktop/cleanup verification are release gates. [Details](cloud.md).

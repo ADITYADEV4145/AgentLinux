@@ -32,6 +32,8 @@ const Help = `agent-linux: an agent-ready Linux machine (local developer release
 
 Usage: agent-linux COMMAND [options]
   doctor          Read-only host, runtime and resource diagnostics
+  start           Start/resume Linux and open its interactive viewer (NAT)
+  cloud           Development cloud prototype; explicit provider opt-in
   up --local      Create/resume the local VM; wait for guest handshake + probe
   status          Reconcile runtime state and check the actual guest service
   stop            Request graceful shutdown and confirm runtime stopped
@@ -40,7 +42,7 @@ Usage: agent-linux COMMAND [options]
   copy-in/out     Explicit bounded one-way regular-file transfers
   delete/reset    Guarded destructive actions; require selected machine ID
 
-Use COMMAND --help for options. Cloud is not implemented.
+Use COMMAND --help for options. Cloud is an opt-in development prototype, not a deployed service.
   view            Live view-only desktop: Kitty graphics or secure loopback web
   mcp             Serve the existing local machine over MCP stdio
   mcp-config      Print client configuration; never modifies client settings
@@ -281,6 +283,12 @@ func Run(ctx context.Context, args []string, out, errout io.Writer) int {
 	}
 	if len(args) > 0 && (args[0] == "browsers" || args[0] == "packages") {
 		return runSoftware(ctx, args, out, errout)
+	}
+	if len(args) > 0 && args[0] == "start" {
+		return runStart(ctx, args[1:], out, errout)
+	}
+	if len(args) > 0 && args[0] == "cloud" {
+		return runCloud(ctx, args[1:], out, errout)
 	}
 	o, e := Parse(args, errout)
 	if errors.Is(e, flag.ErrHelp) {

@@ -25,8 +25,9 @@ var Instructions string
 const Version = "0.3.5"
 
 type Options struct {
-	Debug   io.Writer     // Only operation name, outcome code and duration; never arguments/results.
-	Timeout time.Duration // Shorter deadlines are useful in tests; maximum is 70 seconds.
+	EnabledTools map[string]bool // nil keeps the local tool set; cloud filters actual capabilities.
+	Debug        io.Writer       // Only operation name, outcome code and duration; never arguments/results.
+	Timeout      time.Duration   // Shorter deadlines are useful in tests; maximum is 70 seconds.
 }
 type Result struct {
 	OK      bool   `json:"ok"`
@@ -51,6 +52,9 @@ func New(computer machine.Machine, opts Options) *mcp.Server {
 		limit = 70 * time.Second
 	}
 	add := func(name, description string, properties map[string]*jsonschema.Schema, required []string) {
+		if opts.EnabledTools != nil && !opts.EnabledTools[name] {
+			return
+		}
 		schema := &jsonschema.Schema{Type: "object", Properties: properties, Required: required, AdditionalProperties: &jsonschema.Schema{Not: &jsonschema.Schema{}}}
 		resolved, err := schema.Resolve(nil)
 		if err != nil {
@@ -222,7 +226,7 @@ func New(computer machine.Machine, opts Options) *mcp.Server {
 		}
 		if kind == "type" {
 			p["text"] = str("UTF-8 text, at most 64 KiB; guest clipboard paste, verify insertion")
-			p["pasteMode"] = enum("standard", "terminal")
+			p["pasteMode"] = enum("standard", "terminal", "auto")
 			required = append(required, "text")
 		}
 		if kind == "key" {

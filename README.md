@@ -1,8 +1,8 @@
 # Agent Linux
 
-An agent-controlled Linux desktop on an Apple silicon Mac. Cloud is future work.
+An agent-ready Linux desktop on an Apple silicon Mac, with human control and a development cloud backend.
 
-**Local developer release candidate 0.5.0-rc.1:** real Debian/Xfce desktop, Chromium/Firefox, guest-only screenshots/input/commands, official-SDK MCP, a view-only Kitty viewer and authenticated live loopback fallback. Tested on one development Mac; not a production/security certification. No binary release or VM image is published by this phase.
+**Local developer release candidate 0.5.0-rc.1:** real Debian/Xfce desktop, Chromium/Firefox, guest-only screenshots/input/commands, official-SDK MCP, a Kitty viewer and authenticated live loopback fallback. Tested on one development Mac; not a production/security certification. No binary release or VM image is published by this phase.
 
 **Phase 5.5 workstation:** retain **Debian 13 / Xfce 4.20**, with a new `workstation-5.5.0` recipe: Greybird, readable fonts, a clear panel and original wallpaper, plus the full application set. [Actual Xfce/Plasma comparison, GNOME research, measurements and limitations](docs/workstation.md). Existing machines keep their sealed recipe; use a new namespace to try the changes.
 
@@ -29,17 +29,19 @@ For the remaining examples, `agent-linux` means the installed executable's full 
 ```sh
 agent-linux version --json
 agent-linux doctor --lima /absolute/path/to/limactl --json
-agent-linux up --local --network=nat --lima /absolute/path/to/limactl
-# Print configuration to review/install in your chosen client; no global edits:
+agent-linux start --lima /absolute/path/to/limactl
+# Linux boots/resumes and opens the interactive viewer. F2 gives control to your agent.
+# Ctrl+] exits the viewer; Linux stays running. Ctrl+C goes to Linux.
+# In another terminal, print configuration to review/install in your chosen client; no global edits:
 agent-linux mcp-config --client codex --lima /absolute/path/to/limactl
-agent-linux view --lima /absolute/path/to/limactl
+agent-linux view --lima /absolute/path/to/limactl  # optional separate view-only observer
 # Connect the agent using docs/mcp.md, then ask it to open the guest browser and verify what it sees.
-# q/Ctrl+C exits the terminal viewer; the VM stays running.
+# Separate view-only viewer: q/Ctrl+C exits; the VM stays running.
 agent-linux stop --lima /absolute/path/to/limactl
 agent-linux up --local --lima /absolute/path/to/limactl  # resumes persistent guest data
 ```
 
-Kitty **0.50.0** is the visually verified terminal; unsupported terminals use the live loopback web viewer. Chrome **156.0.8078.80** fallback is tested. [Viewer behavior and actual demo evidence](docs/viewer.md), [MCP setup and tested clients](docs/mcp.md), and [first-run troubleshooting/compatibility](docs/troubleshooting.md) state precise limits. There are no fabricated screenshots or performance claims.
+Kitty **0.50.0** is the visually verified terminal; unsupported terminals use the live loopback web viewer. Chrome **156.0.8078.80** view-only fallback is tested; new human web controls have automated routing tests, with real-browser interaction acceptance pending. [Viewer behavior and actual demo evidence](docs/viewer.md), [MCP setup and tested clients](docs/mcp.md), and [first-run troubleshooting/compatibility](docs/troubleshooting.md) state precise limits. There are no fabricated screenshots or performance claims.
 
 If limactl is on PATH, omit `--lima` from these and subsequent commands. Otherwise provide it **before positional arguments** on every command that contacts the VM:
 
@@ -72,6 +74,18 @@ agent-linux stop
 `exec` runs argv **inside Linux**, never on the Mac. Granting machine control access allows arbitrary commands as the guest `agent` user and access to guest data. JSON exec results contain separate base64 stdout/stderr plus exit/timeout/output/cleanup status; human output escapes guest terminal controls. A shell is used only when explicitly requested inside the guest. Long-lived GUI demo apps should use `open`; exec cleans up its process scope.
 
 Screenshots are PNG, 1280×800, scale 1, top-left coordinates. Input uses a fresh frame automatically unless `--frame-id` selects a recent observed frame (10-second lifetime). Input acknowledgements mean dispatched, not task completed. Text uses only the **guest** clipboard; some applications reject paste. One display and X11 only; no Wayland or full-motion performance claim.
+
+## One command, human and agent control
+
+After installing prerequisites, run **`agent-linux start`** in Kitty 0.50.0. It starts or resumes the persistent local workstation, waits for the real guest/desktop handshake and opens an interactive viewer. Unsupported terminals show a secure local web viewer URL; open that URL in a browser and use Take control. No cloud machine is created by this command. First startup downloads Linux/packages; subsequent startup keeps your guest files. NAT can reach host/LAN services.
+
+In the terminal, type normally, click or scroll on the desktop, and use bracketed paste for Unicode text. **F2** gives control to the agent or takes it back; both can observe, but only the input owner can mutate. **Ctrl+]** exits without stopping Linux. Ctrl+C and `q` are guest input. F3 selects standard/terminal paste if automatic detection is unsuitable. Legacy terminal encoding limits shortcuts; continuous mouse drag, IME composition and complete desktop shortcut parity are not implemented in the human viewer. Agents retain the existing guest drag operation. `start --view-only` and plain `view` are observers.
+
+The web fallback uses explicit text/shortcut fields and click/scroll controls; it never reads the host clipboard. Ownership coordinates cooperating clients and expires after disconnect; it is not a security boundary against guest applications or same-UID host processes. See [controls and limitations](docs/viewer.md).
+
+## Development cloud prototype
+
+[Phase 6 setup, provider research and pending acceptance](docs/cloud.md). The authenticated API/remote machine/MCP/viewer paths are implemented. The default provider is visibly **SIMULATED** and creates no Linux VM. An optional E2B adapter requires explicit operator opt-in and remains untested against the paid provider. Production identity, public deployment, billing and persistent cloud homes are not implemented. E2B service terms require commercial permission review before a hosted offering.
 
 ## File transfer and lifecycle
 

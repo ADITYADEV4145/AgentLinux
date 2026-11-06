@@ -6,9 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/ADITYADEV4145/AgentLinux/internal/protocol"
 	"golang.org/x/sys/unix"
 	"golang.org/x/term"
 )
@@ -198,15 +201,67 @@ func (k *ExitKeys) Feed(data []byte) bool {
 	return false
 }
 func RunTerminal(parent context.Context, h *Hub, t Terminal, machineID string) error {
+	return runTerminal(parent, h, t, machineID, nil)
+}
+func RunInteractiveTerminal(parent context.Context, h *Hub, t Terminal, machineID string) error {
+	return runTerminal(parent, h, t, machineID, NewHuman(h.Machine))
+}
+func runTerminal(parent context.Context, h *Hub, t Terminal, machineID string, human *Human) error {
 	defer t.Close()
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
+	type packet struct {
+		data []byte
+		size Size
+	}
+	packets := make(chan packet, 4)
+	if human != nil {
+		if human.Control == nil {
+			return fmt.Errorf("backend does not support input ownership")
+		}
+		modeTerminal, ok := t.(interface {
+			InputModes(context.Context) (map[int]bool, error)
+		})
+		if !ok {
+			return ErrUnsupported
+		}
+		original, e := modeTerminal.InputModes(ctx)
+		if e != nil {
+			return e
+		}
+		restore := ""
+		for _, mode := range []int{1000, 1006, 2004} {
+			suffix := "l"
+			if original[mode] {
+				suffix = "h"
+			}
+			restore += fmt.Sprintf("\x1b[?%d%s", mode, suffix)
+		}
+		defer func() {
+			human.Release()
+			c, done := context.WithTimeout(context.Background(), time.Second)
+			defer done()
+			_ = t.Write(c, []byte(restore))
+		}()
+		if e := t.Write(ctx, []byte("\x1b[?1000h\x1b[?1006h\x1b[?2004h")); e != nil {
+			return e
+		}
+	}
 	readDone := make(chan struct{})
 	go func() {
 		defer close(readDone)
 		var keys ExitKeys
 		for {
 			b, e := t.Read(ctx)
+			if e == nil && human != nil {
+				size, _ := t.Size()
+				select {
+				case packets <- packet{b, size}:
+				case <-ctx.Done():
+					return
+				}
+				continue
+			}
 			if e != nil || keys.Feed(b) {
 				cancel()
 				return
@@ -218,15 +273,32 @@ func RunTerminal(parent context.Context, h *Hub, t Terminal, machineID string) e
 	var size Size
 	var snapshot Snapshot
 	var lastErr error
+	var humanKeys HumanKeys
+	var keyAt time.Time
+	autoTake := human != nil
 	ticker := time.NewTicker(200 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		if ctx.Err() != nil {
 			return nil
 		}
+		if human != nil {
+			if e := human.Heartbeat(ctx); e != nil {
+				human.Notice = Code(e) + "; F2 retake"
+			}
+		}
 		latest, e := h.Next(ctx)
 		if e == nil {
 			snapshot = latest
+			if human != nil {
+				human.Observe(snapshot.Frame)
+				if autoTake {
+					autoTake = false
+					if e := human.Handle(ctx, HumanEvent{Action: "toggle"}, size); e != nil {
+						human.Notice = Code(e) + "; F2 retake"
+					}
+				}
+			}
 		}
 		lastErr = e
 		newSize, e := t.Size()
@@ -267,7 +339,68 @@ func RunTerminal(parent context.Context, h *Hub, t Terminal, machineID string) e
 			digest = snapshot.Digest
 			h.Sent(len(snapshot.Frame.PNG))
 		}
-		e = t.Write(writeCtx, []byte(statusLines(size, machineID, status, age)))
+		if human != nil {
+			events := []HumanEvent{}
+			select {
+			case packet := <-packets:
+				keyAt = time.Now()
+				events = humanKeys.Feed(packet.data)
+				if packet.size != size {
+					filtered := events[:0]
+					for _, ev := range events {
+						if ev.Input.Kind != "click" && ev.Input.Kind != "scroll" {
+							filtered = append(filtered, ev)
+						}
+					}
+					events = filtered
+					human.Notice = "Resize: mouse event discarded"
+				}
+			default:
+				if !keyAt.IsZero() && time.Since(keyAt) > 150*time.Millisecond {
+					events = humanKeys.FlushEscape()
+				}
+			}
+			for n := 0; n < 3; n++ {
+				select {
+				case packet := <-packets:
+					more := humanKeys.Feed(packet.data)
+					for _, event := range more {
+						if packet.size != size && (event.Input.Kind == "click" || event.Input.Kind == "scroll") {
+							continue
+						}
+						events = append(events, event)
+					}
+				default:
+					n = 3
+				}
+			}
+			merged := events[:0]
+			for _, event := range events {
+				if len(merged) > 0 && event.Action == "" && event.Input.Kind == "text" && merged[len(merged)-1].Input.Kind == "text" && len(merged[len(merged)-1].Input.Text)+len(event.Input.Text) <= protocol.MaxText {
+					merged[len(merged)-1].Input.Text += event.Input.Text
+				} else {
+					merged = append(merged, event)
+				}
+			}
+			events = merged
+			for _, event := range events {
+				if event.Action == "exit" {
+					done()
+					return nil
+				}
+				if e := human.Handle(ctx, event, size); e != nil {
+					human.Notice = Code(e) + "; F2 retake"
+				}
+				h.Invalidate()
+			}
+		}
+		done()
+		writeCtx, done = context.WithTimeout(ctx, 5*time.Second)
+		footer := ""
+		if human != nil {
+			footer = human.Footer()
+		}
+		e = t.Write(writeCtx, []byte(statusLinesFooter(size, machineID, status, age, footer)))
 		done()
 		if e != nil {
 			return e
@@ -282,16 +415,25 @@ func RunTerminal(parent context.Context, h *Hub, t Terminal, machineID string) e
 
 // Keep the actionable state visible when a window cannot fit the full identity.
 func statusLines(size Size, machineID, status, age string) string {
+	return statusLinesFooter(size, machineID, status, age, "")
+}
+func statusLinesFooter(size Size, machineID, status, age, customFooter string) string {
 	if size.Columns <= 0 || size.Rows <= 0 {
 		return ""
 	}
 	line := fmt.Sprintf("Agent Linux %s | %s | last capture %s", machineID, status, age)
 	footer := "VIEW ONLY | q / Ctrl+C exits; VM stays running | agent uses MCP"
+	if customFooter != "" {
+		footer = customFooter
+	}
 	if len(line) >= size.Columns {
 		line = fmt.Sprintf("%s | %s | capture %s", status, machineID, age)
 	}
 	if size.Columns < 32 {
 		footer = "q exits; VM stays on"
+		if customFooter != "" {
+			footer = "Ctrl+] exits; F2 handoff"
+		}
 	}
 	clip := func(s string) string {
 		// Leave the final cell unused to avoid automatic wrapping/scrolling.
@@ -306,4 +448,32 @@ func statusLines(size Size, machineID, status, age string) string {
 		out += fmt.Sprintf("\x1b[%d;1H\x1b[2K", size.Rows) + clip(footer)
 	}
 	return out
+}
+
+// InputModes records VT private modes before an interactive viewer changes them.
+// DECRQM replies are bounded and consumed before starting the input reader.
+func (t *Session) InputModes(parent context.Context) (map[int]bool, error) {
+	ctx, cancel := context.WithTimeout(parent, 700*time.Millisecond)
+	defer cancel()
+	if e := t.Write(ctx, []byte("\x1b[?1000$p\x1b[?1006$p\x1b[?2004$p")); e != nil {
+		return nil, e
+	}
+	modes := map[int]bool{}
+	var data []byte
+	pattern := regexp.MustCompile("\\x1b\\[\\?(1000|1006|2004);([12])\\$y")
+	for len(data) < 1024 && len(modes) < 3 {
+		b, e := t.Read(ctx)
+		if e != nil {
+			return nil, ErrUnsupported
+		}
+		data = append(data, b...)
+		for _, match := range pattern.FindAllStringSubmatch(string(data), -1) {
+			n, _ := strconv.Atoi(match[1])
+			modes[n] = match[2] == "1"
+		}
+	}
+	if len(modes) != 3 {
+		return nil, ErrUnsupported
+	}
+	return modes, nil
 }

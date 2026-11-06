@@ -16,7 +16,7 @@ import (
 )
 
 const Version = "2.0"
-const GuestVersion = "0.5.0"
+const GuestVersion = "0.6.0"
 const MaxFrame = 16 << 20
 const MaxRequest = 256 << 10
 const MaxPNG = 8 << 20
@@ -179,4 +179,6 @@ func WriteRequest(w io.Writer, q Request) error {
 }
 
 // Phase 3.5 extends launch targets without changing the v2 wire contract.
-func CompatibleGuestVersion(v string) bool { return v == GuestVersion || v == "0.3.5" || v == "0.2.0" }
+func CompatibleGuestVersion(v string) bool {
+	return v == GuestVersion || v == "0.5.0" || v == "0.3.5" || v == "0.2.0"
+}

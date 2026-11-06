@@ -226,7 +226,30 @@ func (d *Desktop) Input(ctx context.Context, i protocol.Input) (*protocol.InputR
 		key, _ := protocol.TranslateKey(i.Key)
 		e = xdo("key", "--clearmodifiers", key)
 	case "text":
-		e = d.paste(ctx, i.Text, i.PasteMode)
+		mode := i.PasteMode
+		if mode == "auto" {
+			mode = "standard"
+			w, err := d.run(ctx, "/usr/bin/xdotool", "getactivewindow")
+			if err != nil {
+				return nil, protocol.Fail("INPUT_FAILED", "cannot determine focused guest application")
+			}
+			id := strings.TrimSpace(string(w.Out))
+			if _, err = strconv.ParseUint(id, 10, 64); err != nil {
+				return nil, protocol.Fail("INPUT_FAILED", "invalid focused guest window")
+			}
+			app, err := d.run(ctx, "/usr/bin/xprop", "-id", id, "WM_CLASS")
+			if err != nil {
+				return nil, protocol.Fail("INPUT_FAILED", "cannot inspect focused guest application")
+			}
+			class := strings.ToLower(string(app.Out))
+			for _, name := range []string{"terminal", "konsole", "ptyxis", "xterm", "alacritty", "kitty"} {
+				if strings.Contains(class, name) {
+					mode = "terminal"
+					break
+				}
+			}
+		}
+		e = d.paste(ctx, i.Text, mode)
 	}
 	if e != nil {
 		return nil, protocol.Fail("INPUT_FAILED", "guest input failed or timed out; state may have changed, observe before retrying")
@@ -346,6 +369,19 @@ func (d *Desktop) activate(ctx context.Context, id string) error {
 	}
 	if _, e := d.run(ctx, "/usr/bin/xdotool", "windowactivate", "--sync", id); e != nil {
 		return protocol.Fail("APP_UNAVAILABLE", "guest application window could not be focused")
+	}
+	// EWMH activation alone can leave keyboard focus on a different guest app,
+	// especially after switching away from a fullscreen browser. Focus the actual
+	// selected guest window and verify it before acknowledging app activation.
+	if _, e := d.run(ctx, "/usr/bin/xdotool", "windowraise", id); e != nil {
+		return protocol.Fail("APP_UNAVAILABLE", "guest window could not be raised")
+	}
+	if _, e := d.run(ctx, "/usr/bin/xdotool", "windowfocus", "--sync", id); e != nil {
+		return protocol.Fail("APP_UNAVAILABLE", "guest keyboard focus unavailable")
+	}
+	focused, e := d.run(ctx, "/usr/bin/xdotool", "getwindowfocus")
+	if e != nil || strings.TrimSpace(string(focused.Out)) != id {
+		return protocol.Fail("APP_UNAVAILABLE", "guest window activation did not establish keyboard focus")
 	}
 	return nil
 }

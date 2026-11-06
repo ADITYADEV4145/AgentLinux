@@ -21,7 +21,7 @@ type RemovalPlan struct {
 	Entries        []string `json:"ownedEntries"`
 }
 
-var ownedEntries = map[string]bool{"state.json": true, "machine.yaml": true, "config.sha256": true, "debian-arm64.qcow2": true, "guest_host": true, "guest_host.pub": true, "control": true, "control.pub": true, "known_hosts": true, "lima": true, "tmp": true, "events.jsonl": true, "backend.jsonl": true, ".agent-linux-owner": true, "lock": true}
+var ownedEntries = map[string]bool{"state.json": true, "machine.yaml": true, "config.sha256": true, "debian-arm64.qcow2": true, "guest_host": true, "guest_host.pub": true, "control": true, "control.pub": true, "known_hosts": true, "lima": true, "tmp": true, "events.jsonl": true, "input-lease.json": true, "backend.jsonl": true, ".agent-linux-owner": true, "lock": true}
 
 func (c *Controller) removalPlan(id, action string) (State, RemovalPlan, error) {
 	s, e := c.load()

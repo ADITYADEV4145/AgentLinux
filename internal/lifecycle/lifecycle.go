@@ -4,6 +4,7 @@ package lifecycle
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ADITYADEV4145/AgentLinux/internal/config"
@@ -14,7 +15,17 @@ import (
 	"time"
 )
 
+type RemoteState struct {
+	Provider                string    `json:"provider"`
+	ExpiresAt               time.Time `json:"expiresAt"`
+	IdleStopAt              time.Time `json:"idleStopAt"`
+	EstimatedRuntimeSeconds int64     `json:"estimatedRuntimeSeconds"`
+	Persistent              bool      `json:"persistent"`
+	Simulated               bool      `json:"simulated"`
+}
 type State struct {
+	Backend        string         `json:"backend,omitempty"`
+	Remote         *RemoteState   `json:"remote,omitempty"`
 	Schema         int            `json:"schema"`
 	MachineID      string         `json:"machineId"`
 	State          string         `json:"state"`
@@ -40,10 +51,11 @@ type Backend interface {
 	Handshake(context.Context, State) (*protocol.Info, error)
 }
 type Controller struct {
-	Root      string
-	Backend   Backend
-	Preflight func(config.Spec, bool) error
-	Progress  func(string)
+	Root         string
+	ControlOwner string // Transient random viewer nonce; never passed to the guest.
+	Backend      Backend
+	Preflight    func(config.Spec, bool) error
+	Progress     func(string)
 }
 
 func (c *Controller) load() (State, error) {
@@ -201,7 +213,7 @@ func (c *Controller) upLocked(ctx context.Context, spec config.Spec, creationFla
 	return s, nil
 }
 func (c *Controller) Status(ctx context.Context) (State, error) {
-	unlock, e := storage.Lock(c.Root)
+	unlock, e := storage.LockWait(ctx, c.Root, 2*time.Second)
 	if e != nil {
 		return State{}, e
 	}
@@ -289,6 +301,9 @@ func (c *Controller) Stop(ctx context.Context) (State, error) {
 		s.Stage = ""
 		return s, c.save(&s)
 	}
+	if e = c.revokeLease(); e != nil {
+		return s, e
+	}
 	s.State = "stopping"
 	s.Stage = "graceful_shutdown"
 	s.Guest = nil
@@ -337,6 +352,11 @@ func (c *Controller) GuestCall(ctx context.Context, q protocol.Request) (*protoc
 	if !ok {
 		return nil, protocol.Fail("UNSUPPORTED_OPERATION", "backend has no guest computer interface")
 	}
+	if q.Method == "input" || q.Method == "exec" || q.Method == "open" || q.Method == "files" {
+		if e = c.checkInputLease(s); e != nil {
+			return nil, e
+		}
+	}
 	return backend.Call(ctx, s, q)
 }
 
@@ -354,6 +374,9 @@ func (c *Controller) Maintain(ctx context.Context, action string, packages []str
 	if e != nil {
 		return nil, e
 	}
+	if e = c.checkInputLease(s); e != nil {
+		return nil, e
+	}
 	if s.State == "not_created" {
 		return nil, protocol.Fail("NOT_READY", "create and start the VM first")
 	}
@@ -367,4 +390,17 @@ func (c *Controller) Maintain(ctx context.Context, action string, packages []str
 		return nil, protocol.Fail("UNSUPPORTED_OPERATION", "backend has no explicit guest package maintenance")
 	}
 	return b.Maintain(ctx, action, packages)
+}
+
+// Cloud machines do not have a local VM config, image pathname or Lima spec.
+func (s State) MarshalJSON() ([]byte, error) {
+	type plain State
+	if s.Backend != "cloud" {
+		return json.Marshal(plain(s))
+	}
+	v := plain(s)
+	return json.Marshal(struct {
+		*plain
+		Spec *config.Spec `json:"spec,omitempty"`
+	}{plain: &v})
 }

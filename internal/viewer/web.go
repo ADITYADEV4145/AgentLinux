@@ -32,6 +32,8 @@ type Web struct {
 	host, token, id string
 	hub             *Hub
 	gate            chan struct{}
+	human           *Human
+	inputMu         sync.Mutex
 }
 
 func NewWeb(h *Hub, id string) (*Web, error) {
@@ -83,7 +85,15 @@ func (w *Web) Serve(ctx context.Context) error {
 	}
 	return e
 }
-func (w *Web) Close() { _ = w.server.Close(); _ = w.listener.Close() }
+func (w *Web) Close() {
+	_ = w.server.Close()
+	_ = w.listener.Close()
+	w.inputMu.Lock()
+	defer w.inputMu.Unlock()
+	if w.human != nil {
+		w.human.Release()
+	}
+}
 func (w *Web) handle(out http.ResponseWriter, r *http.Request) {
 	out.Header().Set("Cache-Control", "no-store")
 	out.Header().Set("X-Content-Type-Options", "nosniff")
@@ -93,7 +103,7 @@ func (w *Web) handle(out http.ResponseWriter, r *http.Request) {
 		http.Error(out, "forbidden origin/host", 403)
 		return
 	}
-	if r.Method != "GET" || r.ContentLength != 0 {
+	if !(r.Method == "POST" && r.URL.Path == "/api/input") && (r.Method != "GET" || r.ContentLength != 0) {
 		http.Error(out, "GET only", 405)
 		return
 	}
@@ -125,6 +135,15 @@ func (w *Web) handle(out http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch r.URL.Path {
+	case "/api/input":
+		if r.Method != "POST" {
+			http.Error(out, "POST only", 405)
+			return
+		}
+		w.input(out, r)
+	case "/api/config":
+		out.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(out).Encode(map[string]bool{"interactive": w.human != nil})
 	case "/api/metrics":
 		out.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(out).Encode(w.hub.Metrics())
@@ -139,6 +158,7 @@ func (w *Web) handle(out http.ResponseWriter, r *http.Request) {
 		out.Header().Set("ETag", `"`+s.Digest+`"`)
 		out.Header().Set("X-Machine-ID", w.id)
 		out.Header().Set("X-Frame-ID", s.Frame.ID)
+		out.Header().Set("X-Desktop-Generation", s.Frame.Generation)
 		out.Header().Set("X-Capture-Time", s.Observed.UTC().Format(time.RFC3339Nano))
 		out.Header().Set("X-Image-Width", strconv.Itoa(s.Frame.Width))
 		out.Header().Set("X-Image-Height", strconv.Itoa(s.Frame.Height))

@@ -108,8 +108,8 @@ func (i Input) Validate() error {
 		if !utf8.ValidString(i.Text) || len(i.Text) > MaxText || strings.ContainsRune(i.Text, 0) {
 			return Fail("INVALID_ARGUMENT", "text must be valid UTF-8 up to 64 KiB, without NUL")
 		}
-		if i.PasteMode != "" && i.PasteMode != "standard" && i.PasteMode != "terminal" {
-			return Fail("INVALID_ARGUMENT", "paste mode must be standard or terminal")
+		if i.PasteMode != "" && i.PasteMode != "standard" && i.PasteMode != "terminal" && i.PasteMode != "auto" {
+			return Fail("INVALID_ARGUMENT", "paste mode must be standard, terminal or auto")
 		}
 	}
 	if i.Kind == "key" {
@@ -221,7 +221,7 @@ type Capabilities struct {
 }
 
 func SupportedCapabilities() *Capabilities {
-	return &Capabilities{Apps: Applications(), Displays: 1, Format: "png", Origin: "top-left", Scale: 1, Input: []string{"move", "click", "drag", "scroll", "text", "key"}, PasteModes: []string{"standard", "terminal"}, MaxPNGBytes: MaxPNG, MaxTextBytes: MaxText, MaxOutputBytes: MaxOutput, MaxExecMS: 60000, GuestExec: true}
+	return &Capabilities{Apps: Applications(), Displays: 1, Format: "png", Origin: "top-left", Scale: 1, Input: []string{"move", "click", "drag", "scroll", "text", "key"}, PasteModes: []string{"standard", "terminal", "auto"}, MaxPNGBytes: MaxPNG, MaxTextBytes: MaxText, MaxOutputBytes: MaxOutput, MaxExecMS: 60000, GuestExec: true}
 }
 
 // Applications are implemented guest launch targets, not an installed-package assertion.

@@ -266,3 +266,9 @@ docs/decisions/          short ADRs
 ```
 
 A future `internal/backend/cloud/` is created only with a real provider adapter. Keep host and guest builds distinct so a macOS binary cannot accidentally execute guest input code. Build scripts must work before adding packaging polish; CI without VZ runs unit/contract checks and explicitly skips hardware tests. Planned phase gates and technical experiments: [roadmap.md](roadmap.md), [verification.md](verification.md).
+
+## Phase 6 extension
+
+`internal/cloud` implements a development authenticated session API, durable intent/reconciliation manager, provider interface, explicit simulated provider, optional gated Python E2B SDK worker, and HTTP implementation of `machine.Machine`. CLI/MCP/viewer choose local or cloud explicitly and never fall back between them. Cloud metadata omits fictitious local CPU/image configuration. Capabilities remove unsupported tools; cloud exec/open/files are presently unavailable. API version must match exactly. See [contract, limits, lifecycle and provider gates](cloud.md) and [ADR 0013](decisions/0013-cloud-and-human-control.md).
+
+`start` composes existing local startup and readiness with the interactive viewer. A private expiring input lease coordinates human/agent mutation across processes, using the existing local lock or cloud session gate. Screenshots remain concurrent. No Mac input/clipboard path is introduced. Default `view` remains view-only. New guest helper 0.6.0 adds advertised automatic guest paste selection; protocol remains 2.0 and older supported helpers use explicit paste selection.
