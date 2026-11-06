@@ -19,4 +19,4 @@ jobs:
       - name: Build unpublished unsigned local candidate (no upload)
         run: |
           python3 scripts/package.py --output artifacts/ci-package
-          python3 -c "import sys; from pathlib import Path; sys.path.insert(0, 'scripts'); import install; install.manifest(Path('artifacts/ci-package/agent-linux-0.5.0-rc.1-darwin-arm64').resolve())"
+          python3 scripts/check_bundle.py artifacts/ci-package/agent-linux-0.5.0-rc.1-darwin-arm64

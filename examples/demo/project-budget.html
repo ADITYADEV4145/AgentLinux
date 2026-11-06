@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Project budget demo</title>
+<style>body{font:22px system-ui,sans-serif;max-width:800px;margin:45px auto;background:#eaf2ff;color:#152943}h1{font-size:38px}label{display:block;margin:24px 0}input{font:inherit;width:180px;margin-left:20px;padding:10px}button{font:inherit;padding:12px 28px;background:#175cd3;color:white;border:0;border-radius:8px}output{display:block;font-size:32px;margin:28px 0}small{font-size:16px}</style>
+<h1>Project budget</h1><p>A local demo form inside Linux. No external service or payment.</p>
+<form id="estimate"><label>Hours<input id="hours" type="number" min="0" step="0.5" value="4"></label><label>Hourly rate ($)<input id="rate" type="number" min="0" value="45"></label><label>Expenses ($)<input id="expenses" type="number" min="0" value="30"></label><button>Calculate</button><output id="total" aria-live="polite">Enter values and calculate.</output></form>
+<small>Illustrative project arithmetic. No customer data, cards or transactions.</small>
+<script>document.getElementById('estimate').addEventListener('submit',event=>{event.preventDefault();const value=Number(document.getElementById('hours').value)*Number(document.getElementById('rate').value)+Number(document.getElementById('expenses').value);document.getElementById('total').textContent='Estimate: $'+value.toFixed(2);document.title='Budget verified '+value.toFixed(2);});</script></html>

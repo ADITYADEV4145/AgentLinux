@@ -71,3 +71,7 @@ Pending provider-dependent work: commercial authorization, reviewed/locked SDK e
 Implemented: atomic session/usage ledger, pinned immutable rates, funded optional trial reservations, workspace caps/concurrency/duration, account cancellation/suspension, current-state payment reconciliation, official Stripe Go SDK customer setup/portal/manual usage invoices, verified durable webhook inbox, human/JSON billing CLI, adjustment/review records and an editable assumption-based cost model. Pricing is unconfigured by default; local remains free. Live keys/mode and automatic collection are rejected.
 
 The earlier Phase 6 deferral is superseded by this implementation. Stripe-hosted sandbox acceptance is pending test credentials. Production transactional storage/queue, operational recovery/retention, tax/refund validation, real provider-cost enforcement, commercial permission and separately authorized production activation remain gates. See [billing scope and acceptance](billing.md).
+
+## Phase 8 — local preview and launch preparation
+
+Installed-product real-Mac review, patch toolchain revalidation, native agent/form recording, secure web human acceptance, measured local timings/resources, first-run/doc/package fixes and draft launch materials are prepared. No release/announcement/deployment/paid activation is authorized by this milestone. Follow [launch readiness](launch-readiness.md), [known issues](known-issues.md) and the [contributor roadmap](contributor-roadmap.md).

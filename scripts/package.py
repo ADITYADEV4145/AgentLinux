@@ -51,10 +51,10 @@ def main():
     bundle.mkdir(mode=0o700)
     (bundle / 'bin').mkdir()
     env = os.environ.copy()
-    env.update({'CGO_ENABLED': '0', 'GOARCH': 'arm64', 'GOFLAGS': '', 'GOWORK': 'off', 'GOTOOLCHAIN': 'local', 'GOCACHE': str(repo / '.cache/go-build'), 'GOMODCACHE': str(repo / '.cache/go-mod')})
+    env.update({'CGO_ENABLED': '0', 'GOARCH': 'arm64', 'GOFLAGS': '', 'GOWORK': 'off', 'GOTOOLCHAIN': 'go1.26.9', 'GOCACHE': str(repo / '.cache/go-build'), 'GOMODCACHE': str(repo / '.cache/go-mod')})
     go_version = subprocess.check_output(['go', 'version'], cwd=repo, env=env, text=True).strip()
-    if not go_version.startswith('go version go1.26.1 '):
-        p.error('release candidate packaging requires the selected Go 1.26.1 toolchain')
+    if not go_version.startswith('go version go1.26.9 '):
+        p.error('release candidate packaging requires the selected Go 1.26.9 toolchain')
     for target, name, command in [('darwin', 'agent-linux', './cmd/agent-linux'), ('linux', 'agent-linux-guest', './cmd/agent-linux-guest')]:
         env['GOOS'] = target
         flags = '-s -w -buildid= -X github.com/ADITYADEV4145/AgentLinux/internal/buildinfo.Commit=' + commit
@@ -62,12 +62,13 @@ def main():
     for name in ['LICENSE', 'README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'go.mod', 'go.sum']:
         copy_reviewed(repo, name, bundle)
     # Never sweep ignored local notes, keys, downloads or editor files into a bundle.
-    paths = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', 'docs', 'third_party'], cwd=repo, text=True).split('\0')
+    paths = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', 'docs', 'third_party', 'examples', 'images', 'internal/mcpserver/instructions.txt', 'scripts/cost_model.py', 'scripts/billing_acceptance.py'], cwd=repo, text=True).split('\0')
     for name in sorted(set(paths) - {''}):
         copy_reviewed(repo, name, bundle)
     copy_reviewed(repo, 'scripts/install.py', bundle)
     (bundle / 'scripts/install.py').rename(bundle / 'install.py')
-    (bundle / 'scripts').rmdir()
+    if not any((bundle / 'scripts').iterdir()):
+        (bundle / 'scripts').rmdir()
     inventory = []
     for name in ['agent-linux', 'agent-linux-guest']:
         inventory.append(subprocess.check_output(['go', 'version', '-m', str(bundle / 'bin' / name)], cwd=repo, env=env, text=True).replace(str(bundle / 'bin' / name), name))

@@ -232,7 +232,7 @@ func Parse(args []string, help io.Writer) (Options, error) {
 	})
 	if o.Command == "up" {
 		if !o.Local {
-			return o, errors.New("up requires --local; no cloud backend exists")
+			return o, errors.New("local up requires --local; see cloud --help for the separate development prototype")
 		}
 		if seen["image"] && o.Spec.Image != config.ImageURL && !seen["image-sha512"] {
 			return o, errors.New("custom image requires an explicit trusted --image-sha512")

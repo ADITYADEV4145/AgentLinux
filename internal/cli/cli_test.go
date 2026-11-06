@@ -103,3 +103,17 @@ func TestBillingHelpConfirmationAndReadableMoney(t *testing.T) {
 		t.Fatal("currency display")
 	}
 }
+
+func TestStartRejectsBadMetricsBeforeCreatingState(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "never-created")
+	var out, errout bytes.Buffer
+	if code := Run(context.Background(), []string{"start", "--state-dir", root, "--metrics", "relative.json"}, &out, &errout); code == 0 {
+		t.Fatal("invalid viewer destination accepted")
+	}
+	if _, e := os.Stat(root); !os.IsNotExist(e) {
+		t.Fatal("bad viewer destination created VM state", e)
+	}
+	if !strings.Contains(errout.String(), "no startup was attempted") {
+		t.Fatal(errout.String())
+	}
+}

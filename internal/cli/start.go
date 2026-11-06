@@ -44,6 +44,17 @@ func runStart(ctx context.Context, args []string, out, errout io.Writer) int {
 		fmt.Fprintln(errout, "unexpected start arguments")
 		return 1
 	}
+	// Reject an invalid output destination before starting/creating a VM.
+	if *metrics != "" {
+		if !filepath.IsAbs(*metrics) {
+			fmt.Fprintln(errout, "metrics path must be absolute; no startup was attempted")
+			return 1
+		}
+		if _, e := os.Lstat(*metrics); !os.IsNotExist(e) {
+			fmt.Fprintln(errout, "metrics path must be a new file; no startup was attempted")
+			return 1
+		}
+	}
 	viewerArgs := []string{}
 	if *cloudConfig != "" {
 		mixed := false

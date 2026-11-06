@@ -1,6 +1,6 @@
 # MCP and agent clients
 
-Phase 3, researched and implemented 2026-11-05. The stdio server uses the official Go MCP SDK v1.8.0, not a handwritten JSON-RPC implementation. It adapts `internal/machine.Machine` to a single existing local machine. No cloud or lifecycle tool is advertised. Start the VM yourself first:
+Phase 3, researched and implemented 2026-11-05. The stdio server uses the official Go MCP SDK v1.8.0, not a handwritten JSON-RPC implementation. It adapts `internal/machine.Machine` to one existing selected local machine or an explicitly configured cloud session. No lifecycle or billing tool is advertised. Cloud remains a prototype with capability-filtered tools; see [cloud](cloud.md). Start the VM yourself first:
 
 ```sh
 make build test check
@@ -22,7 +22,7 @@ Every result includes `{ok, code, message?, data?}` as `structuredContent`, mirr
 | `computer_click` | frameId, x, y; optional button, clicks | Left/middle/right, 1 or 2 clicks |
 | `computer_drag` | frameId, x, y, toX, toY; optional button | Guest input acknowledgement |
 | `computer_scroll` | frameId, x, y, dx, dy | Wheel steps, -100..100; positive right/down |
-| `computer_type` | frameId, text; optional pasteMode | UTF-8 through guest clipboard; standard or terminal paste |
+| `computer_type` | frameId, text; optional pasteMode | UTF-8 through guest clipboard; standard/terminal paste, or auto when advertised |
 | `computer_key` | frameId, key | ENTER, TAB, arrows, F1..F12, etc.; CTRL/ALT/SHIFT/SUPER combinations |
 | `computer_open` | app: browser/chromium/firefox/editor/terminal/files/settings/launcher | Fixed guest app launch/focus; screenshot still needed to verify |
 | `computer_run_command` | argv; optional cwd, env, timeoutMs, outputLimit | Guest exit status, separate base64 stdout/stderr, timeout/cancellation/truncation/cleanup indicators |
@@ -39,7 +39,7 @@ The SDK handles initialize/version negotiation, framing, list/call, cancellation
 
 Inbound stdio lines are capped at 256 KiB, with SDK JSON nesting limits. Oversized framing closes the transport; the client must reconnect. Arguments are also bounded and schema-validated before reaching the backend. Guest PNG maximum is 8 MiB and response maximum 16 MiB. Clients must accommodate base64 image framing (~11 MiB at the maximum), rather than assume small text-only responses. Requests have a 70-second server ceiling and propagate client cancellation to backend/SSH/guest cleanup. A shorter client deadline can leave an uncertain outcome: observe before retrying.
 
-Each server allows one in-flight machine operation; a concurrent request returns `MACHINE_BUSY` without waiting or replay. Existing cross-process machine locks also protect against another MCP process or CLI. There is no persistent human/agent ownership lease yet: serial access is enforced, and clients must coordinate their workflow. No broker daemon is necessary for this slice. A future live viewer needs explicit takeover/ownership beyond this lock.
+Each server allows one in-flight machine operation; a concurrent request returns `MACHINE_BUSY` without waiting or replay. Existing cross-process machine locks also protect against another MCP process or CLI. Interactive viewers now hold a 15-second renewable ownership lease. Agents may observe but receive `INPUT_OWNED` for mutations until the human hands control back with F2 or the web control button. Disconnect/restart revokes or expires ownership; observe and explicitly retake. Plain `view` and `start --view-only` do not acquire human input. The lease coordinates cooperating frontends; it is not a guest application isolation boundary.
 
 Codes include `INVALID_ARGUMENT`, `TIMEOUT`, `CANCELED`, `NOT_READY`, `DISCONNECTED`, `DESKTOP_UNAVAILABLE`, `STALE_FRAME`, `STALE_SESSION`, `VERSION_MISMATCH`, `UNSUPPORTED_OPERATION`, `MACHINE_BUSY`, `OUTCOME_UNKNOWN`, `COMMAND_FAILED`, `COMMAND_TIMEOUT`, `CLEANUP_UNCONFIRMED`, and bounded-frame errors. Backend-specific typed codes/context are preserved. Unknown host errors become `BACKEND_ERROR` with a private-diagnostics hint so paths/command secrets are not echoed. `OUTCOME_UNKNOWN` never means a mutation did not occur. Status may return an error state with its diagnostics even when status observation itself succeeds.
 

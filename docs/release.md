@@ -8,7 +8,7 @@ Use [Lima's official v2.2.1 release](https://github.com/lima-vm/lima/releases/ta
 
 ## Build from reviewed source
 
-Prerequisites: Git, **Go 1.26.1**, Python **3.10+** (standard library only), macOS developer command-line tools for local development. First builds fetch pinned Go modules through Go's checksum verification; later builds can use a complete module cache. Runtime: Apple silicon Mac, separately installed **Lima 2.2.1**, OpenSSH/ssh-keygen, at least 30 GiB free for the default 24-GiB logical disk plus conversion/headroom, and enough RAM for the default 4-GiB guest (at most half host RAM). Bare clean macOS may not include Python/Go/Lima; install those prerequisites deliberately first. No Homebrew bootstrap, sudo or shell-profile modification is hidden in our installer.
+Prerequisites: Git, **Go 1.26.9**, Python **3.10+** (standard library only), macOS developer command-line tools for local development. First builds fetch pinned Go modules through Go's checksum verification; later builds can use a complete module cache. Runtime: Apple silicon Mac, separately installed **Lima 2.2.1**, OpenSSH/ssh-keygen, at least 30 GiB free for the default 24-GiB logical disk plus conversion/headroom, and enough RAM for the default 4-GiB guest (at most half host RAM). Bare clean macOS may not include Python/Go/Lima; install those prerequisites deliberately first. No Homebrew bootstrap, sudo or shell-profile modification is hidden in our installer.
 
 ```sh
 git clone https://github.com/ADITYADEV4145/AgentLinux.git
@@ -71,3 +71,5 @@ python3 /path/to/reviewed/bundle/install.py \
 ```
 
 Uninstall removes only validated tool launchers/version directories. It leaves VM data, external Lima/Kitty, shell settings and installer marker/lock intact. It refuses unexpected files rather than deleting them. Removing a running executable does not stop its already-running process or VM. Stop explicitly first. No automatic host-project deletion or system-wide uninstall occurs.
+
+Phase 8 build uses Go 1.26.9. `make` and packaging select that exact patch through Go toolchain support; if absent, Go can fetch it through its authenticated toolchain mechanism into the configured module cache. No system compiler or shell setting is changed. Public supporting `examples`, image recipe/provenance metadata, MCP instructions and cost-model/simulated-billing helper scripts now accompany the local bundle so the bundled billing/demo references are usable. The bundle is not a full Git checkout; build/development test scripts require the reviewed source repository. No OS disk or external runtime/compiler is included.

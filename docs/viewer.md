@@ -1,3 +1,5 @@
+> Current Phase 8 acceptance includes native Kitty and Chrome real guest human widgets; see [performance](performance.md) and [verification](verification.md). Earlier phase notes below are historical.
+
 # Live desktop viewer
 
 `agent-linux view` consumes the **actual Linux guest's** scrot PNG capture through the common machine interface. It never captures or controls the Mac desktop. The first terminal target is **Kitty 0.50.0**, using direct Kitty graphics-protocol PNG chunks. Other terminals, redirected output, tmux/screen, failed capability queries and missing terminal pixel dimensions fall back to an authenticated live loopback web viewer.

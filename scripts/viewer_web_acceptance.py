@@ -23,13 +23,14 @@ def main():
     for name in ('cli', 'lima', 'state-dir', 'viewer-output', 'evidence', 'chrome'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--restart', action='store_true')
+    parser.add_argument('--interactive', action='store_true', help='verify real guest text/click/shortcut through the human web widgets')
     args = parser.parse_args()
     import websocket  # Test-only websocket-client, not a product dependency.
     os.umask(0o077)
     evidence = args.evidence.resolve()
     evidence.mkdir(parents=True, exist_ok=False)
     root = args.state_dir.resolve()
-    if root.parent != Path('/private/tmp') or not root.name.startswith(('agentlinux-viewer-acceptance-', 'agentlinux-rc-acceptance-')):
+    if root.parent != Path('/private/tmp') or not root.name.startswith(('agentlinux-viewer-acceptance-', 'agentlinux-rc-acceptance-', 'agentlinux-launch-acceptance-')):
         raise RuntimeError('acceptance requires an explicitly selected disposable test namespace')
     identity = json.loads((root / 'state.json').read_text())['machineId']
     viewer_url = next(word for word in args.viewer_output.read_text().split() if word.startswith('http://127.0.0.1:'))
@@ -125,6 +126,35 @@ def main():
         time.sleep(6)
         capture('web-live-after-mcp')
         assert (evidence / 'web-live-before.png').read_bytes() != (evidence / 'web-live-after-mcp.png').read_bytes()
+        if args.interactive:
+            # Prepare a fresh known guest file before taking human ownership.
+            ctl('exec','--','/usr/bin/touch','/home/agent/web-human.txt')
+            ctl('open','editor')
+            ctl('key','CTRL+O');ctl('type','/home/agent/web-human.txt');ctl('key','ENTER')
+            time.sleep(1)
+            ctl('key','ALT+F10')  # Maximize the actual guest editor.
+            wait_for(lambda:evaluate("!document.getElementById('control').hidden"))
+            evaluate("document.getElementById('control').click()")
+            wait_for(lambda:evaluate("document.getElementById('control').textContent.includes('Give control')"))
+            # Click the image center through Chrome, not the Mac pointer. A
+            # maximized guest editor has its text area at the desktop center.
+            center=evaluate("(()=>{const r=document.getElementById('desktop').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
+            cdp('Input.dispatchMouseEvent',{'type':'mousePressed','x':center['x'],'y':center['y'],'button':'left','clickCount':1})
+            cdp('Input.dispatchMouseEvent',{'type':'mouseReleased','x':center['x'],'y':center['y'],'button':'left','clickCount':1})
+            wait_for(lambda:evaluate('!inputBusy'))
+            message='Web human café 日本語 👋'
+            evaluate("document.getElementById('text').value="+json.dumps(message))
+            evaluate("document.getElementById('send').click()")
+            wait_for(lambda:evaluate("!inputBusy && document.getElementById('text').value===''"))
+            evaluate("document.getElementById('key').value='CTRL+S';document.getElementById('press').click()")
+            wait_for(lambda:evaluate('!inputBusy'))
+            evaluate("document.getElementById('control').click()")
+            wait_for(lambda:evaluate("document.getElementById('control').textContent==='Take control'"))
+            def saved():
+                value=ctl('exec','--','/usr/bin/cat','/home/agent/web-human.txt')
+                return base64.b64decode(value.get('stdout') or '').decode()==message
+            wait_for(saved)
+            capture('web-human-verified')
         evaluate("document.getElementById('pause').click()")
         time.sleep(2)
         before = json.loads(api('/api/metrics')[1])['captureAttempts']
@@ -143,7 +173,7 @@ def main():
         report = {'passed': True, 'browser': subprocess.check_output([str(args.chrome), '--version'], text=True).strip(),
                   'checks': ['live real PNG in isolated browser', 'no-token/cross-origin/Host rejection',
                              'fragment removed from URL', 'actual MCP changes appear live', 'pause stops capture'],
-                  'restartTested': args.restart, 'durationSeconds': time.monotonic()-started,
+                  'humanInputTested':args.interactive,'restartTested': args.restart, 'durationSeconds': time.monotonic()-started,
                   'clientMetrics': evaluate('window.agentLinuxViewerMetrics'), 'metrics': json.loads(api('/api/metrics')[1])}
         (evidence / 'report.json').write_text(json.dumps(report, indent=2))
         print(json.dumps({k: report[k] for k in ('passed', 'browser', 'checks', 'restartTested')}, indent=2))

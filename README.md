@@ -1,120 +1,109 @@
 # Agent Linux
 
-An agent-ready Linux desktop on an Apple silicon Mac, with human control and a development cloud backend.
+**Give your agent a Linux computer.**
 
-**Local developer release candidate 0.5.0-rc.1:** real Debian/Xfce desktop, Chromium/Firefox, guest-only screenshots/input/commands, official-SDK MCP, a Kitty viewer and authenticated live loopback fallback. Tested on one development Mac; not a production/security certification. No binary release or VM image is published by this phase.
+Run a real Debian/Xfce desktop on an Apple silicon Mac, connect an agent through MCP, and watch or operate Linux in Kitty or a secure local browser viewer. Chromium, Firefox, a file manager, terminal, editor, launcher and settings are included.
 
-**Phase 5.5 workstation:** retain **Debian 13 / Xfce 4.20**, with a new `workstation-5.5.0` recipe: Greybird, readable fonts, a clear panel and original wallpaper, plus the full application set. [Actual Xfce/Plasma comparison, GNOME research, measurements and limitations](docs/workstation.md). Existing machines keep their sealed recipe; use a new namespace to try the changes.
+**Available now:** a source-built local developer preview, tested on one development Mac. **Cloud:** a development API/adapter prototype; the default provider is explicitly **SIMULATED**, and the optional real provider remains unaccepted. **Billing:** sandbox foundation only, with no live activation path. The full promise—“Run it on your Mac or in the cloud”—is a product direction, not a claim that a hosted service is available.
 
-## Install and first demo
+No public binary/image release, independent security audit, notarization, production cloud service or finalized retail prices are claimed. [Launch readiness and blockers](docs/launch-readiness.md).
 
-Prerequisites: **Go 1.26.1**, **Python 3.10+**, Git/macOS developer tools, external **Lima 2.2.1**, OpenSSH, Apple silicon, and at least **30 GiB free** for the default VM (**46 GiB** for the measured 4-CPU/8-GiB/40-GiB workstation profile). macOS **26.5 (25F71)** is tested; macOS 14+ is a development target. Initial creation downloads a pinned **337,510,400-byte (~322 MiB)** Debian image plus changing apt packages; Internet is required. No offline network-isolation mode is offered.
+## Requirements and install
+
+- Apple silicon Mac with hardware virtualization. macOS **26.5 (25F71)** on an M4 Pro is tested; macOS 14+ is a target, not a verified minimum.
+- **Go 1.26.9**, Python **3.10+**, Git/macOS developer command-line tools, OpenSSH, and external **Lima 2.2.1**. `make` pins the Go patch toolchain; it may fetch that compiler through Go's authenticated toolchain mechanism if absent. [Official Go downloads](https://go.dev/dl/) and [Lima's exact release](https://github.com/lima-vm/lima/releases/tag/v2.2.1). A newer runtime is not silently accepted.
+- At least **30 GiB free** for the default 2-CPU/4-GiB-RAM/24-GiB logical disk. Sparse usage grows. Initial setup downloads a pinned **337,510,400-byte (~322 MiB)** Debian image plus changing signed Debian packages; Internet is required.
+- For terminal graphics, **Kitty 0.50.0** is the tested target. Install it deliberately using [upstream instructions](https://sw.kovidgoyal.net/kitty/binary/). Other terminals receive a live, authenticated loopback web-viewer URL.
 
 ```sh
 git clone https://github.com/ADITYADEV4145/AgentLinux.git
 cd AgentLinux
 make build test check
-# From a reviewed, committed source tree; no upload or public release:
-python3 scripts/package.py --output dist/rc-build
+./bin/agent-linux doctor --lima /absolute/path/to/limactl --json
+```
+
+If Lima 2.2.1 is on PATH, omit `--lima`. Otherwise use that flag consistently, **before positional arguments**, for each local VM command. No system package manager, sudo, shell-profile edit or prerequisite installation is hidden in our tool.
+
+Optional private tool installation, from a reviewed committed checkout:
+
+```sh
+python3 scripts/package.py --output dist/reviewed-build
 python3 scripts/install.py \
-  --bundle "$PWD/dist/rc-build/agent-linux-0.5.0-rc.1-darwin-arm64" \
+  --bundle "$PWD/dist/reviewed-build/agent-linux-0.5.0-rc.1-darwin-arm64" \
   --prefix "$HOME/.local/share/agent-linux-tools"
-# Use the printed path or deliberately add it to PATH yourself. No shell settings are changed.
 ```
 
-The bundle is publisher-unsigned (Go may add an ad-hoc signature), **not notarized**. The installer verifies a local manifest, stages a version and switches atomically; it never downloads executables or requests sudo. Checksums alone do not prove publisher authenticity. The supported initial distribution path is reviewed source/local build; see [release, upgrade, reset and uninstall](docs/release.md).
+Use the printed executable path or deliberately configure PATH yourself. The bundle is publisher-unsigned/ad-hoc and **not notarized**. The installer verifies local file hashes and switches versions atomically; it never fetches binaries. Checksums alone do not prove publisher authenticity. [Packaging, upgrades and uninstall](docs/release.md).
 
-For the remaining examples, `agent-linux` means the installed executable's full path or a PATH entry you deliberately configured. Developer builds can use `bin/agent-linux` directly.
+## Quick start: two terminals
+
+Terminal A, in Kitty (or open the private browser URL printed by the fallback):
 
 ```sh
-agent-linux version --json
-agent-linux doctor --lima /absolute/path/to/limactl --json
-agent-linux start --lima /absolute/path/to/limactl
-# Linux boots/resumes and opens the interactive viewer. F2 gives control to your agent.
-# Ctrl+] exits the viewer; Linux stays running. Ctrl+C goes to Linux.
-# In another terminal, print configuration to review/install in your chosen client; no global edits:
-agent-linux mcp-config --client codex --lima /absolute/path/to/limactl
-agent-linux view --lima /absolute/path/to/limactl  # optional separate view-only observer
-# Connect the agent using docs/mcp.md, then ask it to open the guest browser and verify what it sees.
-# Separate view-only viewer: q/Ctrl+C exits; the VM stays running.
-agent-linux stop --lima /absolute/path/to/limactl
-agent-linux up --local --lima /absolute/path/to/limactl  # resumes persistent guest data
+./bin/agent-linux start --view-only --lima /absolute/path/to/limactl
 ```
 
-Kitty **0.50.0** is the visually verified terminal; unsupported terminals use the live loopback web viewer. Chrome **156.0.8078.80** view-only fallback is tested; new human web controls have automated routing tests, with real-browser interaction acceptance pending. [Viewer behavior and actual demo evidence](docs/viewer.md), [MCP setup and tested clients](docs/mcp.md), and [first-run troubleshooting/compatibility](docs/troubleshooting.md) state precise limits. There are no fabricated screenshots or performance claims.
-
-If limactl is on PATH, omit `--lima` from these and subsequent commands. Otherwise provide it **before positional arguments** on every command that contacts the VM:
+This creates/resumes a persistent local machine, waits for the real desktop handshake, and keeps the viewer open. It does not create cloud resources. Leave it running while using terminal B:
 
 ```sh
-agent-linux status --json
-agent-linux view          # Kitty target; automatic live web fallback
-agent-linux view --web    # verified live loopback fallback
-agent-linux screenshot --output /tmp/agent-linux.png
-agent-linux open launcher
-agent-linux open files
-agent-linux open settings
-agent-linux open editor
-agent-linux click --button left --clicks 2 300 250
-agent-linux type "hello, café — 日本語 👋"
-agent-linux key CTRL+S
-agent-linux open browser  # Chromium
-agent-linux open firefox
-agent-linux browsers list --json
-agent-linux packages install jq
-agent-linux packages install --profile web-dev
-agent-linux move 850 600
-agent-linux drag 700 50 720 70
-agent-linux scroll 800 600 0 3
-agent-linux exec -- /usr/bin/uname -a
-agent-linux exec --cwd /tmp --env DEMO=value --command-timeout 2s -- /bin/sh -c 'printf "%s\n" "$DEMO"'
-agent-linux logs --backend
-agent-linux stop
+./bin/agent-linux mcp-config --client codex --lima /absolute/path/to/limactl
 ```
 
-`exec` runs argv **inside Linux**, never on the Mac. Granting machine control access allows arbitrary commands as the guest `agent` user and access to guest data. JSON exec results contain separate base64 stdout/stderr plus exit/timeout/output/cleanup status; human output escapes guest terminal controls. A shell is used only when explicitly requested inside the guest. Long-lived GUI demo apps should use `open`; exec cleans up its process scope.
+Review the printed configuration and add it to your chosen client using [agent setup](docs/mcp.md). The printer changes no client settings. The `mcp` command itself is a stdio endpoint launched by the client; it is not a chat prompt or viewer. Codex and the official MCP SDK have real local acceptance evidence. Claude Code/VS Code instructions are documentation-based and their model/tool flows are untested here.
 
-Screenshots are PNG, 1280×800, scale 1, top-left coordinates. Input uses a fresh frame automatically unless `--frame-id` selects a recent observed frame (10-second lifetime). Input acknowledgements mean dispatched, not task completed. Text uses only the **guest** clipboard; some applications reject paste. One display and X11 only; no Wayland or full-motion performance claim.
+Ask the connected agent:
 
-## One command, human and agent control
+> Check my Linux machine. Open its browser, visit https://example.com, capture the result, and describe what you actually see. Use screenshots before and after actions.
 
-After installing prerequisites, run **`agent-linux start`** in Kitty 0.50.0. It starts or resumes the persistent local workstation, waits for the real guest/desktop handshake and opens an interactive viewer. Unsupported terminals show a secure local web viewer URL; open that URL in a browser and use Take control. No cloud machine is created by this command. First startup downloads Linux/packages; subsequent startup keeps your guest files. NAT can reach host/LAN services.
+For a reproducible offline desktop task, use the included [project-budget form and demo script](docs/demo.md). [Measured methods/results](docs/performance.md) distinguish real agent runs, deterministic SDK tests and simulations.
 
-In the terminal, type normally, click or scroll on the desktop, and use bracketed paste for Unicode text. **F2** gives control to the agent or takes it back; both can observe, but only the input owner can mutate. **Ctrl+]** exits without stopping Linux. Ctrl+C and `q` are guest input. F3 selects standard/terminal paste if automatic detection is unsuitable. Legacy terminal encoding limits shortcuts; continuous mouse drag, IME composition and complete desktop shortcut parity are not implemented in the human viewer. Agents retain the existing guest drag operation. `start --view-only` and plain `view` are observers.
+For human control instead, use plain `start` or `view --interactive`. Type, paste Unicode, click and scroll on Linux; **F2** hands input between you and the agent. **Ctrl+]** exits the interactive terminal viewer; Ctrl+C and q go to Linux. Plain `view`/`start --view-only` are observers and exit with q/Ctrl+C. Closing any viewer leaves Linux running. Web controls use explicit Take control/text/shortcut buttons. [Exact controls and limits](docs/viewer.md).
 
-The web fallback uses explicit text/shortcut fields and click/scroll controls; it never reads the host clipboard. Ownership coordinates cooperating clients and expires after disconnect; it is not a security boundary against guest applications or same-UID host processes. See [controls and limitations](docs/viewer.md).
-
-## Development cloud prototype
-
-[Phase 6 setup, provider research and pending acceptance](docs/cloud.md). The authenticated API/remote machine/MCP/viewer paths are implemented. The default provider is visibly **SIMULATED** and creates no Linux VM. An optional E2B adapter requires explicit operator opt-in and remains untested against the paid provider. Production identity, public deployment, live billing and persistent cloud homes are not implemented. E2B service terms require commercial permission review before a hosted offering.
-
-## Sandbox billing foundation
-
-[Phase 7 billing policy, setup, operator recovery and pending acceptance](docs/billing.md). Local use stays free. Cloud pricing/trial allocation requires reviewed configuration; there are no finalized retail prices. The durable usage ledger, workspace reservations/caps, immutable rate versions, trial accounting and usage history are implemented. `agent-linux billing status --config FILE` shows readable amounts, with `--json` for automation.
-
-The official Stripe Go SDK supports sandbox customer/Checkout setup, portal links, explicit manual usage invoices and verified durable webhooks. Live mode/keys and automatic collection are disabled. SDK/signature tests use a local API fixture; actual Stripe-hosted Checkout remains **pending because test credentials were unavailable**. No customer was charged or paid service published. [Editable cost assumptions](examples/cost-model.json) and `python3 scripts/cost_model.py` provide estimated scenarios, not measured economics or retail prices.
-
-## File transfer and lifecycle
-
-Default private machine state: `~/.local/share/agent-linux/local`. `--state-dir` selects an absolute, private application namespace, never home/project itself. `stop` preserves data; `up --local` resumes. No host home/project is mounted and host clipboard sharing is disabled. Guest input/Unicode paste uses the Linux clipboard only.
+Stop deliberately in terminal B:
 
 ```sh
-agent-linux copy-in --source /absolute/reviewed-project.tar --json
-agent-linux copy-out --source /home/agent/results.txt --output /absolute/new-results.txt --json
-agent-linux status --json
-# Stop first. Without --yes, only prints a removal plan and exits with confirmation required:
-agent-linux delete --machine-id MACHINE_ID
-# Review plan and use the exact ID from status. These permanently lose all guest data:
-agent-linux reset --machine-id MACHINE_ID --yes
-# Or delete instead of resetting:
-agent-linux delete --machine-id MACHINE_ID --yes
+./bin/agent-linux stop --lima /absolute/path/to/limactl
+./bin/agent-linux up --local --lima /absolute/path/to/limactl  # resume guest files
 ```
 
-Copy is one-way, one regular file up to **4 MiB**, with path/link/size/checksum checks, no overwrite and no automatic archive extraction. See [file transfer](docs/file-transfer.md). Reset reprovisions a new guest from the pinned image/current recipe and rotates identity/keys; it is not a snapshot or instantaneous restore. Deletion/reset require explicit stopped-machine identity confirmation and never delete files outside the selected owned state. [Uninstall](docs/release.md) removes only the tools; it leaves VM data unless you explicitly delete the machine first.
+## Data, cost and cleanup
 
-## Trust and limitations
+Local use has no Agent Linux usage fee; it consumes your Mac's CPU/RAM/disk/network. Your connected model/client may have its own charges and retention policies. Screenshots, guest commands and tool output go to that client/model. Use a disposable guest and synthetic data for demos.
 
-No host mounts, shared host clipboard, SSH-agent/X11 forwarding, host device or host desktop control. Application communication is pinned SSH over loopback to a guest Unix socket. **NAT can reach host/LAN services; it is not network isolation.** The host process runs with your user's file permissions. Bootstrap guest administration and explicit package maintenance use guest root; MCP's service is non-sudo. X11 apps share the guest session, and guest execution is powerful. Image integrity uses a reviewed compiled SHA-512 pin; detached image signature validation is not automated.
+Default state is `~/.local/share/agent-linux/local`; `--state-dir` selects another private namespace. Stop preserves guest data; reset/delete are destructive and require the exact selected machine ID. No snapshot or instant-reset promise:
 
-Read the [isolation audit and malicious-guest limits](docs/security.md). No independent security audit, production certification, clean-Mac matrix, signed/notarized download, Wayland/multi-display support, human viewer input/takeover, video FPS guarantee or functioning cloud backend is claimed. Claude Code/VS Code setup remains untested as agent integrations; Codex and official-SDK evidence is recorded in [verification](docs/verification.md). This phase uses a real new guest on an existing development Mac; the missing clean-Mac checklist is explicit.
+```sh
+./bin/agent-linux status --json
+# Stop first; inspect the plan before intentionally adding --yes:
+./bin/agent-linux delete --machine-id MACHINE_ID
+# Or permanently reset the stopped selected VM:
+./bin/agent-linux reset --machine-id MACHINE_ID --yes
+```
 
-Original code: [Apache-2.0](LICENSE). External tools/guest packages retain their own terms; [third-party notices](third_party/README.md) and linked dependency inventory accompany local packages. No Lima/Kitty/browser/VM image is bundled. [Contributing](CONTRIBUTING.md), [security reporting](SECURITY.md), [architecture](docs/architecture.md), [roadmap](docs/roadmap.md), and [verification](docs/verification.md).
+Keep using the same nondefault `--state-dir` and `--lima` when applicable. [Guarded lifecycle/uninstall](docs/release.md). Uninstalling tools does not remove VM data or stop running machines. [One-way file copy](docs/file-transfer.md) supports bounded regular files, no overwrite or automatic archive extraction; no host project mount is needed.
+
+Cloud sessions are explicitly selected with private `--cloud-config FILE` for MCP/viewer, or `cloud up` for an opted-in provider. There is no automatic local-to-cloud fallback. Prototype cloud sessions are ephemeral, owned/authenticated, TTL/idle limited and discard guest data on confirmed stop. [Cloud scope and provider/commercial gates](docs/cloud.md). Sandbox `billing status --config FILE` shows configured rates, trial, estimates, reservations and history; live keys/automatic collection are rejected. Hosted Stripe sandbox acceptance is still pending credentials. [Billing policy](docs/billing.md), [editable cost assumptions](examples/cost-model.json).
+
+## Compatibility and limitations
+
+| Component | Verified scope | Limits / pending |
+| --- | --- | --- |
+| Local VM | Apple M4 Pro, macOS 26.5, Lima 2.2.1 / Apple VZ | One development Mac; clean-Mac/other Apple silicon/macOS matrix pending; Intel/Linux/Windows local hosts unsupported |
+| Linux workstation | ARM64 Debian 13, Xfce 4.20, helper 0.6.0, protocol 2.0 | One 1280×800 X11/Xvfb display; no Wayland/multi-display; old disks keep their recipe/helper |
+| Browsers/apps | Debian Chromium/Firefox ESR, Thunar, terminal, Mousepad, settings/launcher | Package versions evolve with signed repository updates; vendor Google Chrome ARM64 is not silently substituted |
+| Terminal | Kitty 0.50.0; real native images, resize and restoration tested | No tmux/screen, full-motion FPS, IME composition or continuous human drag guarantee |
+| Web fallback | Chrome 156 view-only and real guest click/Unicode/save widgets tested | Broader browser, accessibility and physical input matrix pending; see current acceptance in [verification](docs/verification.md) |
+| Agents | Real Codex CLI and official Go MCP SDK | Image-capable client/model needed; other client integrations remain unverified |
+| Cloud / payments | Implemented prototype and local SDK/simulation tests | No real-provider acceptance, public service, production identity/database or Stripe-hosted sandbox completion |
+
+Input uses fresh original PNG coordinates, top-left, scale 1. Dispatch acknowledgement is not application success; observe again. Arbitrary command execution is **inside the guest**, with access to guest data/network. Human ownership serializes cooperating frontends and is not an isolation boundary between X11 applications or hostile same-UID host processes.
+
+No host home/project mount, clipboard sharing, pointer control, SSH-agent forwarding or device sharing by default. The host process uses your ordinary file permissions; provisioning/explicit package maintenance uses guest administration. **NAT can reach host/LAN services; it is not network isolation.** Image integrity is a reviewed compiled SHA-512 pin; detached signature validation is not automated. The VM reduces risk and is not a certified malicious-code sandbox. [Security boundaries](docs/security.md).
+
+## Help and contribute
+
+Start with `doctor`, `status --json`, bounded `logs --backend` and [troubleshooting](docs/troubleshooting.md). Never post keys, VM state, project data or unreviewed screenshots in issues. [Security reporting](SECURITY.md) explains the private-contact gap that must be resolved before broader distribution.
+
+[Architecture](docs/architecture.md) · [Verification](docs/verification.md) · [Contributor roadmap](docs/contributor-roadmap.md) · [Contributing](CONTRIBUTING.md) · [Known issues](docs/known-issues.md).
+
+Original repository code, including the development control plane and adapter code, is **Apache-2.0**: [license](LICENSE). External runtimes, SDKs, browsers and guest packages retain their own [licenses/notices](third_party/README.md). No Lima/Kitty/compiler/browser/VM image or operated hosted service is bundled. A future managed service may be paid; its availability, pricing and any separately developed proprietary components must be disclosed explicitly. Open-source adapter code does not make an external provider's infrastructure open source.

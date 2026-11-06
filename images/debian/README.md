@@ -8,7 +8,7 @@ Phase 5.5 retains this image and installs the full [polished Xfce workstation](.
 
 ## Reproduce
 
-1. Build the host and static Linux ARM64 helper with `make build` (Go 1.26.1).
+1. Build the host and static Linux ARM64 helper with `make build` (Go 1.26.9).
 2. Install/check Lima 2.2.1 according to its upstream instructions. The project neither runs a curl-to-shell installer nor modifies global settings.
 3. Run `bin/agent-linux doctor --lima /absolute/path/to/limactl`.
 4. Run `bin/agent-linux up --local --network=nat --lima /absolute/path/to/limactl`. The initial default is 2 vCPUs, 4 GiB RAM, 24 GiB logical disk. This is an experiment configuration, not a supported minimum. A conservative new-machine check reserves logical disk capacity plus 6 GiB; restart requires 2 GiB free. CPU/RAM limits are also checked.

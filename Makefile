@@ -1,3 +1,4 @@
+export GOTOOLCHAIN := go1.26.9
 export GOCACHE := $(CURDIR)/.cache/go-build
 export GOMODCACHE := $(CURDIR)/.cache/go-mod
 
