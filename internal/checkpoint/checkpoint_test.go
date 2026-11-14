@@ -35,7 +35,7 @@ func fixture(t *testing.T) Manager {
 		}
 		data := []byte("original " + path)
 		if path == paths[0] {
-			data = make([]byte, 2<<20)
+			data = make([]byte, 4<<20)
 			copy(data, "original disk")
 			data[len(data)-1] = 42
 		}
@@ -265,7 +265,7 @@ func TestSparseFallbackAndInsufficientSpace(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if len(data) != 2<<20 || data[len(data)-1] != 42 {
+	if len(data) != 4<<20 || data[len(data)-1] != 42 {
 		t.Fatal("sparse copy changed data or length")
 	}
 }

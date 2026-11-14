@@ -211,3 +211,5 @@ public Netlify deployment, cloud and unfinished Stripe work were not changed.
 A final real restore repeated receipt-based cleanup successfully; a fourth checkpoint
 was refused, preview required confirmation, explicit checkpoint deletion passed, and
 the disposable VM was stopped with two private checkpoints retained.
+
+GitHub Linux CI for implementation commit `a8df429` passed: [run 43573185063](https://github.com/ADITYADEV4145/AgentLinux/actions/runs/43573185063), including full race-enabled checks, Linux ARM64 guest/macOS ARM64 host builds and unpublished unsigned package verification. A validation-only follow-up expands the sparse fixture to include complete zero-filled chunks between nonzero endpoints; the Mac checkpoint race tests passed with that fixture.
