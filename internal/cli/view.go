@@ -38,6 +38,7 @@ func runView(ctx context.Context, args []string, out, errout io.Writer) int {
 	web := f.Bool("web", false, "use live local web viewer even in Kitty; prints a private clickable URL")
 	target := f.String("terminal", "auto", "auto or kitty; unsupported terminals fall back to live web")
 	interval := f.Duration("interval", time.Second, "minimum capture interval, 250ms..5s; static screens adapt up to 5s")
+	captureMode := f.String("capture-transport", "persistent", "local capture transport: persistent pinned SSH or oneshot diagnostic fallback")
 	metrics := f.String("metrics", "", "optional NEW absolute private JSON metrics file written on exit")
 	fail := func(e error) int { fmt.Fprintln(errout, e); return 1 }
 	if e := f.Parse(args); e != nil {
@@ -46,7 +47,7 @@ func runView(ctx context.Context, args []string, out, errout io.Writer) int {
 		}
 		return 1
 	}
-	if f.NArg() != 0 || (*target != "auto" && *target != "kitty") || *interval < 250*time.Millisecond || *interval > 5*time.Second {
+	if (*captureMode != "persistent" && *captureMode != "oneshot") || f.NArg() != 0 || (*target != "auto" && *target != "kitty") || *interval < 250*time.Millisecond || *interval > 5*time.Second {
 		return fail(errors.New("invalid viewer arguments; use view --help"))
 	}
 	if !filepath.IsAbs(*root) {
@@ -62,6 +63,7 @@ func runView(ctx context.Context, args []string, out, errout io.Writer) int {
 	}
 	var state lifecycle.State
 	var computer machine.Machine
+	var capture *lima.CaptureTransport
 	if *cloudConfig != "" {
 		c, e := cloud.LoadClient(*cloudConfig)
 		if e != nil {
@@ -69,7 +71,7 @@ func runView(ctx context.Context, args []string, out, errout io.Writer) int {
 		}
 		mixed := false
 		f.Visit(func(v *flag.Flag) {
-			if v.Name == "state-dir" || v.Name == "lima" {
+			if v.Name == "state-dir" || v.Name == "lima" || v.Name == "capture-transport" {
 				mixed = true
 			}
 		})
@@ -103,7 +105,13 @@ func runView(ctx context.Context, args []string, out, errout io.Writer) int {
 		if e != nil {
 			return fail(e)
 		}
-		c := &lifecycle.Controller{Root: private, Backend: &lima.Backend{Root: private, Executable: executable}}
+		backend := &lima.Backend{Root: private, Executable: executable}
+		if *captureMode == "persistent" {
+			capture = lima.NewCaptureTransport(ctx, backend)
+			backend.Capture = capture
+			defer capture.Close()
+		}
+		c := &lifecycle.Controller{Root: private, Backend: backend}
 		if *interactive {
 			c.ControlOwner = protocol.ID()
 		}
@@ -118,6 +126,9 @@ func runView(ctx context.Context, args []string, out, errout io.Writer) int {
 			var usage unix.Rusage
 			_ = unix.Getrusage(unix.RUSAGE_SELF, &usage)
 			data := map[string]any{"hostOS": runtime.GOOS, "hostArch": runtime.GOARCH, "goVersion": runtime.Version(), "durationSeconds": time.Since(started).Seconds(), "goHeapBytes": mem.HeapAlloc, "goSysBytes": mem.Sys, "maxRSSNativeUnits": usage.Maxrss, "rssUnitNote": "bytes on macOS; KiB on Linux", "cpuUserSeconds": float64(usage.Utime.Sec) + float64(usage.Utime.Usec)/1e6, "cpuSystemSeconds": float64(usage.Stime.Sec) + float64(usage.Stime.Usec)/1e6, "stream": hub.Metrics()}
+			if capture != nil {
+				data["captureTransport"] = capture.Stats()
+			}
 			file, e := os.OpenFile(*metrics, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 			if e != nil {
 				fmt.Fprintln(errout, "could not create viewer metrics file")

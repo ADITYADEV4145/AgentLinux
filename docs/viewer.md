@@ -93,3 +93,15 @@ The viewer saves and restores terminal termios, alternate screen/cursor and quer
 The interactive web fallback provides Take control/Give agent control, text entry, terminal-paste selection, shortcut input, image clicks and wheel scrolling. It uses the same authenticated loopback/frame path, does not read navigator.clipboard, and has no host shell or lifecycle endpoint. Browser keyboard input uses explicit fields rather than claiming complete native desktop keyboard behavior. Cloud viewers use `--cloud-config FILE`; simulated sessions are labeled and remote expiry is shown. See [cloud boundaries](cloud.md) and [verification](verification.md).
 
 Real Phase 6 acceptance passed in Kitty 0.50.0 on the documented development Mac: human PTY typing/Unicode/mouse, explicit MCP handoff, resize, Ctrl+] exit, canonical input and original mouse/paste mode restoration. Web human widgets have automated validation/auth tests; full real-browser input acceptance is still pending. [Exact evidence and timings](verification.md).
+
+## Local hardening capture transport
+
+Local viewers default to a viewer-owned persistent pinned SSH capture channel.
+Use `--capture-transport oneshot` for the original diagnostic transport. Capture
+failures are visible; the next observation reconnects, without replaying input.
+Connections recycle below guest request/idle limits. CLI screenshots remain
+one-shot. Native capture is asynchronous with one latest update; two fixed Kitty
+image buffers preserve the previous placement until its replacement is submitted.
+The new native painting path still requires fresh visual acceptance; see
+[hardening evidence](local-hardening-verification.md). Closing either viewer
+leaves the machine running.

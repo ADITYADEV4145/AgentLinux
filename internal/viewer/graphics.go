@@ -34,36 +34,52 @@ func Candidate(tty bool, term, program, kitty, tmux, screen string) bool {
 const Query = "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c"
 
 func Supported(reply []byte) bool { return strings.Contains(string(reply), "\x1b_Gi=31;OK\x1b\\") }
-func DeleteImage() string         { return fmt.Sprintf("\x1b_Ga=d,d=I,i=%d,q=2;\x1b\\", ImageID) }
+func deleteID(id int) string      { return fmt.Sprintf("\x1b_Ga=d,d=I,i=%d,q=2;\x1b\\", id) }
+func DeleteImage() string         { return deleteID(ImageID) + deleteID(ImageID+1) }
 
 type WriteFunc func(context.Context, []byte) error
 
-// Render uses direct PNG chunks only, never terminal file reads or guest text.
+// Renderer keeps at most two terminal images. Transmit the replacement before
+// placing it, and free the old image only after the new placement is submitted.
+type Renderer struct{ current int }
+
 func Render(ctx context.Context, write WriteFunc, p Placement, png []byte) error {
+	var r Renderer
+	return r.Render(ctx, write, p, png)
+}
+func (r *Renderer) Render(ctx context.Context, write WriteFunc, p Placement, png []byte) error {
 	if p.Columns == 0 {
 		return nil
 	}
-	if e := write(ctx, []byte(DeleteImage()+fmt.Sprintf("\x1b[%d;%dH", p.Row, p.Column))); e != nil {
-		return e
+	id := ImageID
+	if r.current == ImageID {
+		id++
 	}
 	encoded := base64.StdEncoding.EncodeToString(png)
 	for first := true; len(encoded) > 0; first = false {
-		n := 4096
-		if n > len(encoded) {
-			n = len(encoded)
-		}
+		n := min(4096, len(encoded))
 		more := 0
 		if n < len(encoded) {
 			more = 1
 		}
 		header := fmt.Sprintf("\x1b_Gm=%d;", more)
 		if first {
-			header = fmt.Sprintf("\x1b_Ga=T,t=d,f=100,i=%d,c=%d,C=1,q=2,m=%d;", ImageID, p.Columns, more)
+			header = fmt.Sprintf("\x1b_Ga=t,t=d,f=100,i=%d,q=2,m=%d;", id, more)
 		}
 		if e := write(ctx, []byte(header+encoded[:n]+"\x1b\\")); e != nil {
 			return e
 		}
 		encoded = encoded[n:]
 	}
+	placement := fmt.Sprintf("\x1b[%d;%dH\x1b_Ga=p,i=%d,c=%d,C=1,q=2;\x1b\\", p.Row, p.Column, id, p.Columns)
+	if e := write(ctx, []byte(placement)); e != nil {
+		return e
+	}
+	if r.current != 0 {
+		if e := write(ctx, []byte(deleteID(r.current))); e != nil {
+			return e
+		}
+	}
+	r.current = id
 	return nil
 }

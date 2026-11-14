@@ -47,3 +47,55 @@ connection-reuse measurements remain Phase 1 acceptance work.
   site baseline; additional viewer edits are deliberately outside that baseline.
 - Phases 1–5 remain in progress until their checks and hardware evidence are
   recorded. No broader reliability or smoothness claim is made.
+
+## Phase 1 implementation and bounded comparison — 2026-11-14
+
+Viewer-owned capture SSH channels retain the same pinned host key, guest
+machine identity, hello and nonce checks. Each response also validates boot,
+service session and PNG metadata. Only screenshots use this channel; mutations
+remain one-shot and are never replayed. A canceled/failed request destroys the
+stream; a later observation reconnects. Recycle after 48 captures or 45 seconds
+idle, below the guest's 64-request/75-second limits. Each operation is bounded
+by six seconds and parent cancellation. `view --capture-transport oneshot`
+retains the diagnostic path; standalone `screenshot` is unchanged.
+
+Terminal capture now runs separately from the interaction loop, with one capture
+in flight and a single replaceable latest-update slot. Input is processed before
+rendering; the reader recognizes exit even while a backend call is waiting.
+Two fixed Kitty image IDs alternate: transmission and placement of the replacement
+precede deletion of the previous image. Both IDs are freed during cleanup.
+Existing cross-process invalidation and demand-driven browser capture remain.
+
+Same disposable host/guest and three synthetic Unicode text actions, matching
+one-shot control versus persistent transport (one short run per mode):
+
+| Observation | One-shot control | Persistent |
+| --- | ---: | ---: |
+| Median guest capture request, 6 samples | 359.6 ms | 293.4 ms |
+| Maximum capture request | 371.3 ms | 350.2 ms |
+| Median action → changed PNG, 3 samples | 1764.8 ms | 1694.2 ms |
+| Viewer user + system CPU | 0.358 s / 8.074 s | 0.328 s / 7.752 s |
+| Viewer peak RSS | 56,852,480 bytes | 60,588,032 bytes |
+
+Persistent metrics recorded one connection opened, five reuses and zero failures.
+This sample suggests lower capture overhead; it does not establish broad
+performance, animation FPS, terminal paint latency, statistically robust tails,
+or successful semantic task completion. Warm CLI screenshots remain one-shot
+(~396–398 ms median), as intended. The small RSS difference is reported without
+attributing it to a specific cause. CPU/RSS exclude SSH, VM and terminal.
+
+`make build test check` covers both binaries, race-enabled Go tests, Python
+installer/worker/cost-model checks, vet and whitespace. New doubles test channel
+reuse/recycling, nonce/boot/session mismatch, failure without replay, reconnect
+on the next observation, cancellation, bounded buffer IDs and replacement order,
+slow capture with responsive resize/cancellation and terminal cleanup.
+
+**Hardware gate still pending:** the native computer-use tool refused access to
+Kitty, so this change's actual double-buffer painting and native exit/resize
+acceptance were not visually repeated. Earlier Kitty acceptance remains historical
+and does not validate the new render path. On an unlocked supported Mac, open a
+new Kitty window, run `view` for a disposable namespace, use guest MCP input,
+resize wide/tall, exercise Ctrl+] in interactive mode (q in view-only), compare
+`stty -g` before/after normal exit and interrupts, then check `status` remains
+ready. Repeat with `--capture-transport oneshot`. No claim of complete Phase 1
+hardware acceptance is made until that checklist is recorded.

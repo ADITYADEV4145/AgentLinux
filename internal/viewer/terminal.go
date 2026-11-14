@@ -251,9 +251,16 @@ func runTerminal(parent context.Context, h *Hub, t Terminal, machineID string, h
 	go func() {
 		defer close(readDone)
 		var keys ExitKeys
+		var exitDetector HumanKeys
 		for {
 			b, e := t.Read(ctx)
 			if e == nil && human != nil {
+				for _, event := range exitDetector.Feed(b) {
+					if event.Action == "exit" {
+						cancel()
+						return
+					}
+				}
 				size, _ := t.Size()
 				select {
 				case packets <- packet{b, size}:
@@ -269,6 +276,44 @@ func runTerminal(parent context.Context, h *Hub, t Terminal, machineID string, h
 		}
 	}()
 	defer func() { cancel(); <-readDone }()
+	type update struct {
+		snapshot Snapshot
+		err      error
+	}
+	updates := make(chan update, 1)
+	captureDone := make(chan struct{})
+	go func() {
+		defer close(captureDone)
+		captureTick := time.NewTicker(100 * time.Millisecond)
+		defer captureTick.Stop()
+		for {
+			if ctx.Err() != nil {
+				return
+			}
+			snapshot, err := h.Next(ctx)
+			latest := update{snapshot, err}
+			select {
+			case updates <- latest:
+			default:
+				select {
+				case <-updates:
+				default:
+				}
+				select {
+				case updates <- latest:
+				case <-ctx.Done():
+					return
+				}
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-captureTick.C:
+			}
+		}
+	}()
+	defer func() { cancel(); <-captureDone }()
+	var renderer Renderer
 	var digest string
 	var size Size
 	var snapshot Snapshot
@@ -287,20 +332,23 @@ func runTerminal(parent context.Context, h *Hub, t Terminal, machineID string, h
 				human.Notice = Code(e) + "; F2 retake"
 			}
 		}
-		latest, e := h.Next(ctx)
-		if e == nil {
-			snapshot = latest
-			if human != nil {
-				human.Observe(snapshot.Frame)
-				if autoTake {
-					autoTake = false
-					if e := human.Handle(ctx, HumanEvent{Action: "toggle"}, size); e != nil {
-						human.Notice = Code(e) + "; F2 retake"
+		select {
+		case update := <-updates:
+			if update.err == nil {
+				snapshot = update.snapshot
+				if human != nil {
+					human.Observe(snapshot.Frame)
+					if autoTake {
+						autoTake = false
+						if err := human.Handle(ctx, HumanEvent{Action: "toggle"}, size); err != nil {
+							human.Notice = Code(err) + "; F2 retake"
+						}
 					}
 				}
 			}
+			lastErr = update.err
+		default:
 		}
-		lastErr = e
 		newSize, e := t.Size()
 		if e != nil {
 			return e
@@ -331,14 +379,7 @@ func runTerminal(parent context.Context, h *Hub, t Terminal, machineID string, h
 			digest = ""
 			_ = t.Write(writeCtx, []byte(DeleteImage()))
 		}
-		if snapshot.Frame != nil && p.Columns > 0 && (digest != snapshot.Digest || changedSize) {
-			if e = Render(writeCtx, t.Write, p, snapshot.Frame.PNG); e != nil {
-				done()
-				return e
-			}
-			digest = snapshot.Digest
-			h.Sent(len(snapshot.Frame.PNG))
-		}
+
 		if human != nil {
 			events := []HumanEvent{}
 			select {
@@ -393,6 +434,14 @@ func runTerminal(parent context.Context, h *Hub, t Terminal, machineID string, h
 				}
 				h.Invalidate()
 			}
+		}
+		if snapshot.Frame != nil && p.Columns > 0 && (digest != snapshot.Digest || changedSize) {
+			if e = renderer.Render(writeCtx, t.Write, p, snapshot.Frame.PNG); e != nil {
+				done()
+				return e
+			}
+			digest = snapshot.Digest
+			h.Sent(len(snapshot.Frame.PNG))
 		}
 		done()
 		writeCtx, done = context.WithTimeout(ctx, 5*time.Second)

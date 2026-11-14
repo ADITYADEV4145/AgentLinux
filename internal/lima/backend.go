@@ -26,6 +26,7 @@ import (
 type Backend struct {
 	Root, Executable string
 	Progress         func(string)
+	Capture          *CaptureTransport
 }
 
 func (b *Backend) home() string { return filepath.Join(b.Root, "lima") }
@@ -357,6 +358,12 @@ func verifyImage(path, digest string) error {
 	return nil
 }
 
+// sshArgs is shared by one-shot and viewer-owned channels. Never inherit SSH
+// config, agent, X11 forwarding, port forwards, or relaxed host key policy.
+func (b *Backend) sshArgs(s lifecycle.State, o lifecycle.Observation) []string {
+	return []string{"-F", "/dev/null", "-T", "-p", fmt.Sprint(o.Port), "-i", filepath.Join(b.Root, "control"), "-o", "IdentitiesOnly=yes", "-o", "IdentityAgent=none", "-o", "ForwardAgent=no", "-o", "ForwardX11=no", "-o", "ClearAllForwardings=yes", "-o", "StrictHostKeyChecking=yes", "-o", "NoHostAuthenticationForLocalhost=no", "-o", "UserKnownHostsFile=" + filepath.Join(b.Root, "known_hosts"), "-o", "GlobalKnownHostsFile=/dev/null", "-o", "HostKeyAlias=agent-linux-" + s.MachineID, "-o", "HostKeyAlgorithms=ssh-ed25519", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ServerAliveInterval=2", "-o", "ServerAliveCountMax=2", "agent@127.0.0.1"}
+}
+
 // Pinning is independent from Lima's relaxed bootstrap SSH policy.
 func (b *Backend) exchange(ctx context.Context, s lifecycle.State, o lifecycle.Observation) (*protocol.Info, error) {
 	return b.exchangeCall(ctx, s, o, nil)
@@ -366,7 +373,7 @@ func (b *Backend) exchangeCall(ctx context.Context, s lifecycle.State, o lifecyc
 	if o.Port < 1 || o.Port > 65535 {
 		return nil, protocol.Fail("DISCONNECTED", "runtime SSH endpoint not available")
 	}
-	args := []string{"-F", "/dev/null", "-T", "-p", fmt.Sprint(o.Port), "-i", filepath.Join(b.Root, "control"), "-o", "IdentitiesOnly=yes", "-o", "IdentityAgent=none", "-o", "ForwardAgent=no", "-o", "ForwardX11=no", "-o", "ClearAllForwardings=yes", "-o", "StrictHostKeyChecking=yes", "-o", "NoHostAuthenticationForLocalhost=no", "-o", "UserKnownHostsFile=" + filepath.Join(b.Root, "known_hosts"), "-o", "GlobalKnownHostsFile=/dev/null", "-o", "HostKeyAlias=agent-linux-" + s.MachineID, "-o", "HostKeyAlgorithms=ssh-ed25519", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ServerAliveInterval=2", "-o", "ServerAliveCountMax=2", "agent@127.0.0.1"}
+	args := b.sshArgs(s, o)
 	cmd := process.Prepare(ctx, "ssh", args...)
 	cmd.Env = b.env()
 	in, e := cmd.StdinPipe()
@@ -532,6 +539,9 @@ func (b *Backend) Call(ctx context.Context, s lifecycle.State, q protocol.Reques
 	}
 	if !o.Exists || o.Status != "Running" {
 		return nil, protocol.Fail("NOT_READY", "local VM is not running")
+	}
+	if q.Method == "screenshot" && b.Capture != nil {
+		return b.Capture.Call(ctx, s, o, q)
 	}
 	return b.exchangeCall(ctx, s, o, &q)
 }

@@ -248,7 +248,7 @@ func TestTerminalDisconnectRecoveryResizeCleanup(t *testing.T) {
 	if e := RunTerminal(ctx, h, terminal, identity); e != nil {
 		t.Fatal(e)
 	}
-	if !terminal.closed || !strings.Contains(terminal.data.String(), "DISCONNECTED") || !strings.Contains(terminal.data.String(), "a=T") || strings.Contains(terminal.data.String(), "private message") {
+	if !terminal.closed || !strings.Contains(terminal.data.String(), "DISCONNECTED") || !strings.Contains(terminal.data.String(), "a=p") || strings.Contains(terminal.data.String(), "private message") {
 		t.Fatal("recovery/cleanup failed")
 	}
 	terminal = &terminalDouble{fail: true}
