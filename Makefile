@@ -13,6 +13,7 @@ test:
 	python3 -m unittest discover -s scripts -p test_install.py
 	python3 -m unittest discover -s scripts -p test_cloud_worker.py
 	python3 -m unittest discover -s scripts -p test_cost_model.py
+	python3 -m unittest discover -s scripts -p test_build_site.py
 
 check:
 	go vet ./...

@@ -34,3 +34,6 @@ __pycache__/
 
 # Owner-supplied raw export; reviewed embedded integration is tracked instead.
 /site-export-*/
+
+# Netlify local account/project association (never credentials in Git)
+.netlify/
