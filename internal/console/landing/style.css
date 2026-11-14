@@ -14,3 +14,29 @@
 [data-framer-badge-container] {
   display: none !important;
 }
+
+/* Owner-supplied artwork stays byte-for-byte intact. The background viewport
+   fits its generous source margins without stretching or redrawing the mark. */
+a[data-framer-name="Logo"], a.brand {
+  position: relative !important;
+  display: block !important;
+  width: 200px !important;
+  height: 44px !important;
+  max-width: 55vw;
+  flex: 0 0 auto !important;
+  overflow: hidden;
+  font-size: 0 !important;
+}
+a[data-framer-name="Logo"] > *, a.brand > * { opacity: 0 !important; }
+a[data-framer-name="Logo"]::after, a.brand::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url('/brand/agent-linux-logo.png') center / 125% auto no-repeat;
+  pointer-events: none;
+}
+@media (max-width: 809px) {
+  a[data-framer-name="Logo"], a.brand { width: 176px !important; height: 40px !important; }
+}
+/* Keep the supplied light artwork legible on the console's dark navigation. */
+a.brand::after { background-color: #fbf8f4; border-radius: 6px; }

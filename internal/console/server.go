@@ -292,7 +292,7 @@ func (s *Server) serveLanding(w http.ResponseWriter, r *http.Request) bool {
 		_, _ = w.Write(data)
 		return true
 	}
-	if strings.HasPrefix(name, "/fonts/") {
+	if strings.HasPrefix(name, "/fonts/") || strings.HasPrefix(name, "/brand/") {
 		if path.Clean(name) != name {
 			http.NotFound(w, r)
 			return true

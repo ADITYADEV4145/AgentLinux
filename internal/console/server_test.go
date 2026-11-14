@@ -192,7 +192,7 @@ func TestExportedLandingRoutesLocalAssetsAndSeparateConsolePolicy(t *testing.T) 
 	if strings.Contains(w.Header().Get("Content-Security-Policy"), "unsafe-inline") {
 		t.Fatal("landing CSP weakened authenticated console")
 	}
-	for _, route := range []string{"/landing-bridge.js", "/landing-style.css", "/fonts/Manrope-variable.ttf", "/framerusercontent.com/images/eom8bDQh6gZMIkmm0Gyn3fClog_1.gif"} {
+	for _, route := range []string{"/landing-bridge.js", "/landing-style.css", "/fonts/Manrope-variable.ttf", "/brand/agent-linux-logo.png", "/framerusercontent.com/images/eom8bDQh6gZMIkmm0Gyn3fClog_1.gif"} {
 		if request(t, s, "GET", route, "", false).Code != 200 {
 			t.Fatal("missing exported asset", route)
 		}
