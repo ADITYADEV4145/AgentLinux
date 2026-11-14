@@ -32,6 +32,7 @@ import (
 const Help = `agent-linux: an agent-ready Linux machine (local developer release candidate)
 
 Usage: agent-linux COMMAND [options]
+  machines        Named local inventory, registration and aggregate resource budgets
   dashboard       Local web console; optional private development cloud config
   doctor          Read-only host, runtime and resource diagnostics
   start           Start/resume Linux and open its interactive viewer (NAT)
@@ -45,6 +46,7 @@ Usage: agent-linux COMMAND [options]
   copy-in/out     Explicit bounded one-way regular-file transfers
   delete/reset    Guarded destructive actions; require selected machine ID
 
+Local selectors: --machine NAME or --state-dir PATH (mutually exclusive).
 Use COMMAND --help for options. Cloud is an opt-in development prototype, not a deployed service.
   view            Live view-only desktop: Kitty graphics or secure loopback web
   mcp             Serve the existing local machine over MCP stdio
@@ -263,7 +265,7 @@ type Envelope struct {
 	Machine *lifecycle.State  `json:"machine,omitempty"`
 }
 
-func Run(ctx context.Context, args []string, out, errout io.Writer) int {
+func runCommand(ctx context.Context, args []string, out, errout io.Writer) int {
 	// No implicit boot when piped, scripted or invoked by a noninteractive client.
 	if len(args) == 0 {
 		if f, ok := out.(*os.File); ok && term.IsTerminal(int(f.Fd())) && term.IsTerminal(int(os.Stdin.Fd())) {
@@ -417,6 +419,7 @@ func Run(ctx context.Context, args []string, out, errout io.Writer) int {
 		backend.Progress = progress
 	}
 	c := lifecycle.Controller{Root: root, Backend: backend, Preflight: func(s config.Spec, newDisk bool) error { return host.Inspect(root, executable).Validate(s, newDisk) }}
+	pinController(ctx, &c)
 	ctx, cancel := context.WithTimeout(ctx, o.Timeout)
 	defer cancel()
 	if o.Command == "up" {

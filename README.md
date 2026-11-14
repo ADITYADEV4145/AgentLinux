@@ -118,14 +118,18 @@ Start with `doctor`, `status --json`, bounded `logs --backend` and [troubleshoot
 
 Original repository code, including the development control plane and adapter code, is **Apache-2.0**: [license](LICENSE). External runtimes, SDKs, browsers and guest packages retain their own [licenses/notices](third_party/README.md). No Lima/Kitty/compiler/browser/VM image or operated hosted service is bundled. A future managed service may be paid; its availability, pricing and any separately developed proprietary components must be disclosed explicitly. Open-source adapter code does not make an external provider's infrastructure open source.
 
-## Website and multiple cloud sessions
+## Named local machines and dashboard
 
 ```sh
-agent-linux dashboard
-# Attach an existing private development cloud identity:
+agent-linux start --machine work
+agent-linux start --machine research
+agent-linux machines list --json
+agent-linux mcp-config --machine work
+agent-linux dashboard --local
+# Separate, experimental cloud mode only with an existing private identity:
 agent-linux dashboard --cloud-config /absolute/private/alice.json
 ```
 
-Open the printed local URL. The responsive console lists only your sessions, shows limits/usage, creates bounded desktops, opens their individual human/agent viewers and explicitly stops selected machines. A fresh development deployment can opt into two sessions per account. The default provider is **SIMULATED**, and real hosted cloud acceptance remains pending. [Console setup and boundaries](docs/web-console.md).
+The default dashboard manages named **local** machines: create, start, inspect actual readiness, open an on-demand interactive viewer and explicitly stop. Saved guest files persist across stop/restart. Aggregate defaults: half host RAM and host logical CPUs minus two (minimum one); these cover managed guest allocations, not every process or unmanaged VM on your Mac. [Names, registration, budgets and limits](docs/local-machines.md). Explicit cloud mode remains a separate **SIMULATED** development prototype unless configured otherwise; real hosted acceptance is pending. [Console setup and boundaries](docs/web-console.md).
 
 Owner-selected display pricing: **$1/h Desktop**, or **$20/month / $200/year** with 30 hours each month; **$2/h Builder (planned)**, or **$40/month / $450/year** with 30 hours each month. Cloud sales and subscription entitlements are not active; the stress model still exposes loss-making scenarios. [Pricing assumptions and activation gate](docs/pricing-targets.md). No website, paid service or public release was deployed. [Source comparison with terminal-mac](docs/terminal-mac-comparison.md) and [follow-up verification](docs/product-polish-verification.md).

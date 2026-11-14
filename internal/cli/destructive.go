@@ -61,6 +61,7 @@ func runDestructive(ctx context.Context, args []string, out, errout io.Writer) i
 	}
 	// Plan preview is read-only and works even if the runtime executable is unavailable.
 	c := lifecycle.Controller{Root: r}
+	pinController(ctx, &c)
 	plan, e := c.PlanRemoval(*id, action)
 	if e != nil {
 		return fail(e)

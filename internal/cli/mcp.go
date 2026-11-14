@@ -92,7 +92,12 @@ func runMCP(ctx context.Context, args []string, out, errout io.Writer) int {
 		if e != nil {
 			return fail(e)
 		}
-		if e = printMCPConfig(out, *client, exe, *root, runtimePath); e != nil {
+		pinned := &lifecycle.Controller{Root: *root}
+		pinController(ctx, pinned)
+		if e = pinExisting(pinned); e != nil {
+			return fail(e)
+		}
+		if e = printMCPArguments(out, *client, exe, []string{"mcp", "--state-dir", *root, "--lima", runtimePath, "--expected-machine-id", pinned.ExpectedID}); e != nil {
 			return fail(e)
 		}
 		return 0
@@ -110,6 +115,10 @@ func runMCP(ctx context.Context, args []string, out, errout io.Writer) int {
 		return fail(e)
 	}
 	c := &lifecycle.Controller{Root: private, Backend: &lima.Backend{Root: private, Executable: runtimePath}}
+	pinController(ctx, c)
+	if e = pinExisting(c); e != nil {
+		return fail(e)
+	}
 	opts := mcpserver.Options{}
 	if *debug {
 		opts.Debug = errout

@@ -36,6 +36,8 @@ var landing embed.FS
 type Server struct {
 	URL         string
 	client      *cloud.Client
+	local       LocalComputer
+	jobs        map[string]localJob
 	token, host string
 	listener    net.Listener
 	server      *http.Server
@@ -176,7 +178,10 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
 	defer cancel()
 	if r.URL.Path == "/api/config" && r.Method == "GET" {
-		send(w, map[string]any{"connected": s.client != nil, "development": true}, nil)
+		send(w, map[string]any{"connected": s.client != nil || s.local != nil, "development": true, "local": s.local != nil}, nil)
+		return
+	}
+	if s.localRequest(w, r, ctx) {
 		return
 	}
 	if s.client == nil {

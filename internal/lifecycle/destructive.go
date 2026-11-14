@@ -149,6 +149,7 @@ func (c *Controller) Remove(ctx context.Context, id string, reset bool, guestBin
 		return s, e
 	}
 	if reset {
+		c.ExpectedID = "" // Explicit reset rotates identity; existing clients remain pinned.
 		return c.upLocked(ctx, s.Spec, true)
 	}
 	return State{Schema: 1, State: "not_created", Observed: "absent"}, nil

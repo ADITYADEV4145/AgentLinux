@@ -99,3 +99,57 @@ resize wide/tall, exercise Ctrl+] in interactive mode (q in view-only), compare
 `stty -g` before/after normal exit and interrupts, then check `status` remains
 ready. Repeat with `--capture-transport oneshot`. No claim of complete Phase 1
 hardware acceptance is made until that checklist is recorded.
+
+## Phase 2 — Named machines and local fleet (2026-11-14)
+
+Implemented private versioned catalog, central CLI selection, short generated
+namespaces, explicit existing-namespace registration, identity-pinned viewer/MCP
+controllers/configuration, atomic startup reservations and configurable aggregate
+budgets. Default machine path and explicit state-directory workflows remain.
+Local dashboard is now the default without a cloud config; authenticated local
+routes support inventory/readiness, asynchronous bounded startup, create, explicit
+stop and on-demand interactive viewers. No cloud implementation is fabricated.
+
+Same M4 Pro / macOS 26.5 / Go 1.26.9 / Lima 2.2.1 / guest 0.6.0 configuration:
+
+- Two actual disposable Debian/Xfce desktops ran concurrently: 2 vCPU / 4 GiB
+  each; one existing test disk 16 GiB, one newly provisioned 8 GiB. Existing test
+  namespace registration moved no disk and preserved its identity. The personal
+  workstation was not started, stopped, reset or modified.
+- Both passed distinct machine/service identities, real desktop readiness,
+  separate 1280×800 guest PNGs and GUI-saved `café 日本語` text read back through
+  each selected guest's command channel. Different per-machine expected strings
+  prevented cross-routing from passing.
+- Additional 2-vCPU / 8-GiB start refused before VM creation: requested aggregate
+  6/10 vCPU and 16/12 GiB. No third VM was booted. The failed creation's private
+  metadata remains inspectable. A UI bug initially counted an absent/error machine
+  as active; fixed absent runtime labeling and known-active allocation display.
+- Real local dashboard showed two ready machines and the enforced 10-vCPU /
+  12-GiB defaults. Open selected the research guest; its real browser viewer
+  displayed the saved Unicode editor contents. Human Take control / Type text /
+  handoff were exercised. Explicit dashboard Stop was independently verified by
+  CLI as stopped, then dashboard Start reached the actual readiness handshake.
+  A browser automation click timed out around stop confirmation; runtime status
+  and refreshed UI established that stop had completed, so it was not replayed.
+- Harness failures are retained privately: empty stdout is JSON null, not always
+  base64 text; `type` uses a bounded temporary clipboard owner and does not promise
+  clipboard persistence; opening an existing editor need not focus it; a save-key
+  acknowledgment can precede filesystem completion. Successful verification used
+  screenshot-based focus and read-only result checks after the observed save.
+  These are not claims that unattended agent recovery is finished.
+
+Automated checks: catalog/name/path validation, unique identities/paths, socket
+length and permissions, simultaneous startup reservations, host RAM reserve,
+running allocations, unknown-runtime fail-closed behavior, central selection and
+conflicts, preserved guest argv, controller identity changes, admission before VM
+creation, dashboard authentication, asynchronous startup deduplication, explicit
+stop and no unready viewer creation. `make build test check` passed, including all race-enabled Go tests, Python
+checks, vet and whitespace validation; `node --check` also passed.
+
+Private screenshots, machine state and capability URLs remain ignored. Native
+Kitty visual re-acceptance from Phase 1 remains pending; no new terminal graphics
+performance claim follows. Mobile creation dialog and desktop inventory were visually checked with no horizontal overflow.
+Saved Unicode files survived the explicit research stop/restart. Both disposable
+test VMs were explicitly stopped after acceptance, freeing their RAM; disks remain
+private for later recovery tests. Disk checkpoints/helper upgrade, capture worker/full
+pointer gestures and observation/recovery hardening are subsequent phases.

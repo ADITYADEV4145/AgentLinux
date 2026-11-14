@@ -112,6 +112,10 @@ func runView(ctx context.Context, args []string, out, errout io.Writer) int {
 			defer capture.Close()
 		}
 		c := &lifecycle.Controller{Root: private, Backend: backend}
+		pinController(ctx, c)
+		if e = pinExisting(c); e != nil {
+			return fail(e)
+		}
 		if *interactive {
 			c.ControlOwner = protocol.ID()
 		}

@@ -154,6 +154,7 @@ func runSoftware(ctx context.Context, args []string, out, errout io.Writer) int 
 		return fail(e)
 	}
 	c := &lifecycle.Controller{Root: root, Backend: &lima.Backend{Root: root, Executable: exe}}
+	pinController(ctx, c)
 	ctx, cancel := context.WithTimeout(ctx, o.timeout)
 	defer cancel()
 	if o.group == "browsers" && o.action == "list" {

@@ -78,8 +78,8 @@ pricing();
 let config = null, fleet = null, loading = false, mutating = false;
 let pendingCreate = null;
 function enableCreate() {
-  const count = fleet ? fleet.sessions.filter(s => s.state !== 'stopped').length : 0;
-  $('new-machine').disabled = !config?.connected || !fleet || mutating || count >= fleet.limits.maxPerOwner;
+  const count = fleet && !config?.local ? fleet.sessions.filter(s => s.state !== 'stopped').length : 0;
+  $('new-machine').disabled = !config?.connected || !fleet || mutating || (!config.local && count >= fleet.limits.maxPerOwner);
 }
 function renderFleet(value) {
   fleet = value;
@@ -127,7 +127,7 @@ function renderBilling(b) {
 async function refresh() {
   if (loading || document.hidden || !config?.connected) return;
   loading = true;
-  try { renderFleet(await api('sessions')); }
+  try { if (config.local) renderLocal(await api('local/machines')); else renderFleet(await api('sessions')); }
   catch (e) { notice(e.message, true); $('new-machine').disabled = true; }
   finally { loading = false; }
 }
@@ -136,22 +136,23 @@ async function openViewer(id, button) {
   const tab = window.open('about:blank', '_blank'); if (tab) tab.opener = null;
   button.disabled = true;
   try {
-    const result = await api('sessions/' + id + '/view', 'POST', {}); const u = new URL(result.url);
+    const result = await api((config.local ? 'local/machines/' : 'sessions/') + id + '/view', 'POST', {}); const u = new URL(result.url);
     if (u.protocol !== 'http:' || u.hostname !== '127.0.0.1' || !/^[A-Za-z0-9_-]{43}$/.test(u.hash.slice(1))) throw new Error('Invalid private viewer URL');
     if (tab) tab.location.replace(u.href); else notice('Popup blocked. Allow popups for this local console, then open the viewer again.', true);
   } catch (e) { if (tab) tab.close(); notice(e.message, true); }
   finally { button.disabled = false; }
 }
 async function stopMachine(s, button) {
-  if (!window.confirm('Stop linux-' + s.id.slice(0, 10) + '? This terminates only this selected session and discards all its guest files.')) return;
+  if (!window.confirm(config.local ? 'Stop ' + s.name + '? Saved guest files persist; unsaved application work may be lost.' : 'Stop linux-' + s.id.slice(0, 10) + '? This terminates only this selected session and discards all its guest files.')) return;
   button.disabled = true;
-  try { await api('sessions/' + s.id + '/stop', 'POST', {confirm: true}); await refresh(); }
+  try { await api((config.local ? 'local/machines/' : 'sessions/') + s.id + '/stop', 'POST', {confirm: true}); await refresh(); }
   catch (e) { notice(e.message, true); button.disabled = false; }
 }
 $('new-machine').addEventListener('click', () => $('create-dialog').showModal());
 $('create-form').addEventListener('submit', async e => {
   if (e.submitter?.value !== 'create') return;
   e.preventDefault();
+  if (config.local) { await createLocal(); return; }
   const seconds = Number($('duration').value);
   if (!Number.isInteger(seconds) || seconds < 30 || seconds > fleet.limits.maxSeconds || mutating) return;
   if (pendingCreate && pendingCreate.seconds !== seconds) { notice('A previous create result is uncertain. Refresh and reconcile it before changing the request.', true); $('create-dialog').close(); return; }
@@ -162,15 +163,58 @@ $('create-form').addEventListener('submit', async e => {
   } catch (e) { $('create-dialog').close(); notice(e.message + ' The same create intent retains its idempotency key in this tab.', true); }
   finally { mutating = false; $('confirm-create').disabled = false; enableCreate(); }
 });
-$('refresh').addEventListener('click', async () => { await refresh(); try {renderBilling(await api('billing'));} catch(e) {notice(e.message,true);} });
+$('refresh').addEventListener('click', async () => { await refresh(); try {if (!config?.local) renderBilling(await api('billing'));} catch(e) {notice(e.message,true);} });
 async function connect() {
   if (!isDashboard) return;
   if (!capability) {notice('Open the private URL printed by agent-linux dashboard, then use Open console. Refreshing or bookmarking this page does not retain its credential.', true); return;}
   try {
     config = await api('config');
     if (!config.connected) { notice('No cloud identity connected. Local Linux is available through agent-linux. To manage development cloud sessions, restart dashboard with --cloud-config FILE.'); return; }
-    await refresh(); renderBilling(await api('billing'));
+    if (config.local) configureLocal();
+    await refresh(); if (!config.local) renderBilling(await api('billing'));
     setInterval(refresh, 3000);
   } catch (e) {notice(e.message,true);}
 }
 connect();
+
+function configureLocal() {
+ $('local-create').hidden=false; $('local-create').disabled=false;
+ $('duration').disabled=true; $('duration').hidden=true;
+ document.querySelector('label[for="duration"]').hidden=true;
+ document.querySelector('#create-form > .muted').textContent='Create a persistent Linux computer on this Mac. Aggregate CPU/RAM budgets and disk-space checks apply. NAT networking can reach host/LAN services.';
+ document.querySelector('#create-form > .fine').textContent='No automatic restart or reset. Closing the viewer leaves Linux running; stopping preserves saved guest data.';
+ document.querySelector('.sidebar > strong').textContent='This Mac';
+ document.querySelector('.console-help p').textContent='Open a ready machine and choose Take control. F2 hands input back in Kitty. Closing the viewer/dashboard leaves Linux running. Stop explicitly; saved files persist.';
+ document.querySelector('#usage > .muted').textContent='Local software usage is free. Budgets govern managed guest allocations, not every VM or process on your Mac. No payment account is needed.';
+ document.querySelector('#usage > details').hidden=true;
+}
+function renderLocal(result) {
+ const value=result.fleet; fleet={sessions:value.machines};
+ const running=value.machines.filter(m=>m.allocated).length;
+ $('active-count').textContent=String(running);
+ $('concurrency').parentElement.querySelector('span').textContent='MANAGED CPU BUDGET';
+ $('concurrency').textContent=value.budget.cpus+' vCPU';
+ $('max-duration').parentElement.querySelector('span').textContent='MANAGED RAM BUDGET';
+ $('max-duration').textContent=value.budget.memoryGiB+' GiB';
+ $('fleet').replaceChildren(...value.machines.map(m=>{
+  const row=node('article',undefined,'machine-row'),name=node('div'),state=node('div'),actions=node('div',undefined,'row-actions');
+  const job=result.jobs[m.id];const phase=job?.state==='starting'?'starting':m.state;
+  name.append(node('strong',m.name),node('small',m.id.slice(0,10)+' · local VZ'));
+  state.append(node('span','● '+phase.toUpperCase(),'machine-state'),node('small',m.cpus+' vCPU · '+m.memoryGiB+' GiB · persistent disk'));
+  if(job?.state==='error') state.append(node('small',job.error));
+  const view=node('button','Open ↗');view.disabled=phase!=='ready';view.addEventListener('click',()=>openViewer(m.id,view));
+  const start=node('button','Start');start.disabled=!['stopped','not_created','error'].includes(phase);start.addEventListener('click',async()=>{start.disabled=true;try{await api('local/machines/'+m.id+'/start','POST',{});await refresh();}catch(e){notice(e.message,true);}});
+  const stop=node('button','Stop');stop.disabled=!['ready','error','unavailable'].includes(phase);stop.addEventListener('click',()=>stopMachine(m,stop));
+  actions.append(view,start,stop);row.append(name,state,actions);return row;
+ }));
+ if (!value.machines.length) {const empty=node('div',undefined,'empty');empty.append(node('h3','Your first Linux workspace.'),node('p','Create a named machine here, or run agent-linux start --machine work. Existing custom namespaces can be explicitly registered through the CLI.'));$('fleet').append(empty);}
+ const pairs=[['Local software','Free'],['Managed allocation limits',value.budget.cpus+' vCPU / '+value.budget.memoryGiB+' GiB'],['Persistence','Saved files survive stop and restart'],['Scope',value.scope]];
+ $('billing-details').replaceChildren(...pairs.map(([k,v])=>{const e=node('div');e.append(node('dt',k),node('dd',v));return e;}));
+ notice('Local catalog connected. Readiness comes from the guest handshake. Viewers capture only on demand; no cloud or billing is involved.');enableCreate();
+}
+async function createLocal(){
+ if(mutating)return;mutating=true;enableCreate();$('confirm-create').disabled=true;
+ try{await api('local/machines','POST',{name:$('local-name').value,cpus:Number($('local-cpus').value),memoryGiB:Number($('local-memory').value),diskGiB:Number($('local-disk').value)});$('create-dialog').close();await refresh();}
+ catch(e){notice(e.message+' Refresh the inventory before retrying; creation is never replayed automatically.',true);$('create-dialog').close();}
+ finally{mutating=false;$('confirm-create').disabled=false;enableCreate();}
+}

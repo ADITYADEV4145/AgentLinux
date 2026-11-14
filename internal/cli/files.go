@@ -62,6 +62,7 @@ func runFiles(ctx context.Context, args []string, out, errout io.Writer) int {
 		return fail(e)
 	}
 	c := lifecycle.Controller{Root: r, Backend: &lima.Backend{Root: r, Executable: ex}}
+	pinController(ctx, &c)
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()
 	call := func(ctx context.Context, q protocol.FileRequest) (*protocol.FileResult, error) {

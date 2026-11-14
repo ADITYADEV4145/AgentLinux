@@ -53,6 +53,8 @@ type Backend interface {
 	Handshake(context.Context, State) (*protocol.Info, error)
 }
 type Controller struct {
+	ExpectedID   string // Pin long-lived clients and named selections to an exact identity.
+	Reserve      func(context.Context, config.Spec) (func(), error)
 	Root         string
 	ControlOwner string // Transient random viewer nonce; never passed to the guest.
 	Backend      Backend
@@ -68,6 +70,9 @@ func (c *Controller) load() (State, error) {
 	}
 	if e != nil {
 		return s, e
+	}
+	if c.ExpectedID != "" && s.MachineID != c.ExpectedID {
+		return s, protocol.Fail("MACHINE_IDENTITY_CHANGED", "Selected machine was replaced; reconnect explicitly after checking status.")
 	}
 	if s.Schema != 1 || !protocol.ValidID(s.MachineID) {
 		return s, errors.New("invalid stored state schema/identity; do not delete disks, inspect state backup")
@@ -159,7 +164,14 @@ func (c *Controller) upLocked(ctx context.Context, spec config.Spec, creationFla
 				return s, e
 			}
 		}
-		s = State{Schema: 1, MachineID: protocol.ID(), State: "creating", Observed: "absent", Stage: "provision_configuration", Spec: spec, BackendVersion: config.LimaVersion}
+		id := c.ExpectedID
+		if id == "" {
+			id = protocol.ID()
+		}
+		if !protocol.ValidID(id) {
+			return s, errors.New("invalid expected machine identity")
+		}
+		s = State{Schema: 1, MachineID: id, State: "creating", Observed: "absent", Stage: "provision_configuration", Spec: spec, BackendVersion: config.LimaVersion}
 		if e = c.save(&s); e != nil {
 			return s, e
 		}
@@ -172,6 +184,13 @@ func (c *Controller) upLocked(ctx context.Context, spec config.Spec, creationFla
 				return s, e
 			}
 		}
+	}
+	if c.Reserve != nil {
+		release, err := c.Reserve(ctx, s.Spec)
+		if err != nil {
+			return s, err
+		}
+		defer release()
 	}
 	if !o.Exists && s.Stage != "provision_configuration" {
 		return c.fail(&s, errors.New("recorded VM is missing; refusing to silently recreate its disk"))
@@ -243,6 +262,7 @@ func (c *Controller) Status(ctx context.Context) (State, error) {
 	s.Observed = o.Status
 	s.Guest = nil
 	if !o.Exists {
+		s.Observed = "absent"
 		return c.fail(&s, errors.New("recorded machine missing from runtime; preserving state, do not recreate automatically"))
 	}
 	if o.Status == "Stopped" {
