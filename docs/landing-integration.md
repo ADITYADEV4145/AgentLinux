@@ -1,0 +1,15 @@
+# Owner-supplied Framer landing integration
+
+Integrated the supplied `site-export-1794633887436` design into the local Go executable on 2026-11-13. The raw export is unchanged and ignored; `scripts/import_landing.py EXPORT_DIRECTORY` reproduces the reviewed embedded HTML, fonts, images and route modules. The bridge script is maintained separately. The page runs without serving files from the raw export directory or needing a Framer-hosted site.
+
+Routes: `/` is the exported landing, `/pricing` is its exported interactive pricing route, `/dashboard` remains the authenticated console. The primary Open local console action carries only the existing ephemeral console capability in a fragment. The bridge clears it before the export runtime starts. Dashboard authentication/Host/Origin/body limits remain intact. This integration does not start a VM from an unauthenticated website, create compute or activate payments. Local machine management is the next hardening phase; the current console retains its honest unconnected state.
+
+The export's relative asset paths are normalized for embedded serving. The supplied smaller GIF variant is reused instead of packaging the redundant 20-MiB variant; no images were generated or edited. External analytics and editor bootstrap are omitted, external form submission is blocked, and fonts/assets are served locally. The landing alone permits its exported inline styles/scripts; the authenticated console retains the stricter CSP. Exported route modules render through the supplied client router, with server markup as a no-JavaScript fallback.
+
+Cloud-ready and first-month-promotion claims were replaced with accurate development/unavailable wording. Owner-selected pricing and the export's design are preserved. No checkout or purchase behavior is fabricated. The terminal illustration is a supplied design asset, not evidence of a real Linux run. The visible Made in Framer badge is hidden at the owner’s request; third-party source/license notices remain. The pricing headline’s Manrope family is used consistently across the landing, pricing and console, with the official variable font bundled locally.
+
+Verification: host/guest build, console boundary/asset/route tests, full repository checks, and browser acceptance of landing images, pricing toggles, FAQ, responsive sizing and console navigation. Private browser captures belong under ignored `artifacts/`, not Git. Nothing was deployed publicly.
+
+The imported export is third-party/generated material, not original Apache-2.0 application code. See `third_party/landing-export.NOTICE.md`; broad release of bundled assets remains subject to the owner's underlying export/font/image permissions.
+
+Browser acceptance on 2026-11-13: real supplied hero image loaded from localhost; pricing route and Monthly selector rendered the selected values; FAQ opened its answer; Open local console reached the authenticated application state. Manrope was verified via computed typography on the landing/console; the badge computed as hidden. Desktop 1440px and mobile 390px layouts had no horizontal overflow. Captures are private under `artifacts/landing-integration/`.

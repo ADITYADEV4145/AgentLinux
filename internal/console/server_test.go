@@ -169,3 +169,37 @@ func TestConsoleFleetCreateStopViewerAndCredentialSeparation(t *testing.T) {
 		t.Fatal("unknown request fields")
 	}
 }
+
+func TestExportedLandingRoutesLocalAssetsAndSeparateConsolePolicy(t *testing.T) {
+	s, e := New(nil)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer s.Close()
+	for _, route := range []string{"/", "/pricing"} {
+		w := request(t, s, "GET", route, "", false)
+		if w.Code != 200 || !strings.Contains(w.Body.String(), "Give") || strings.Contains(w.Body.String(), "events.framer.com/script.js") {
+			t.Fatal("export route/analytics", route, w.Code)
+		}
+		if !strings.Contains(w.Body.String(), "/landing-bridge.js") || strings.Contains(w.Body.String(), "Cloud access is available through the service.") {
+			t.Fatal("unconnected export or false cloud claim")
+		}
+		if !strings.Contains(w.Header().Get("Content-Security-Policy"), "font-src 'self'") {
+			t.Fatal("missing local asset policy")
+		}
+	}
+	w := request(t, s, "GET", "/dashboard", "", false)
+	if strings.Contains(w.Header().Get("Content-Security-Policy"), "unsafe-inline") {
+		t.Fatal("landing CSP weakened authenticated console")
+	}
+	for _, route := range []string{"/landing-bridge.js", "/landing-style.css", "/fonts/Manrope-variable.ttf", "/framerusercontent.com/images/eom8bDQh6gZMIkmm0Gyn3fClog_1.gif"} {
+		if request(t, s, "GET", route, "", false).Code != 200 {
+			t.Fatal("missing exported asset", route)
+		}
+	}
+	for _, route := range []string{"/framerusercontent.com/../server.go", "/framerusercontent.com/missing.mjs", "/events.framer.com/script.js"} {
+		if request(t, s, "GET", route, "", false).Code == 200 {
+			t.Fatal("unexpected file exposure", route)
+		}
+	}
+}

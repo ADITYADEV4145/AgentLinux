@@ -31,3 +31,6 @@ dist/
 
 # Python developer script cache
 __pycache__/
+
+# Owner-supplied raw export; reviewed embedded integration is tracked instead.
+/site-export-*/

@@ -12,6 +12,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"mime"
+	"path"
+	"regexp"
 
 	"net"
 	"net/http"
@@ -26,6 +29,9 @@ import (
 
 //go:embed assets/*
 var assets embed.FS
+
+//go:embed landing
+var landing embed.FS
 
 type Server struct {
 	URL         string
@@ -121,7 +127,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
 	if r.Host != s.host || (r.Header.Get("Origin") != "" && r.Header.Get("Origin") != "http://"+s.host) || r.URL.RawQuery != "" {
 		http.Error(w, "forbidden host/origin/query", 403)
 		return
@@ -131,24 +137,29 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "GET only", 405)
 			return
 		}
-		path := r.URL.Path
-		if path == "/" || path == "/dashboard" {
-			path = "/index.html"
+		if s.serveLanding(w, r) {
+			return
 		}
-		if path != "/index.html" && path != "/app.js" && path != "/app.css" && path != "/pricing.json" {
+		name := r.URL.Path
+		if name == "/dashboard" {
+			name = "/index.html"
+		}
+		kinds := map[string]string{"/index.html": "text/html; charset=utf-8", "/app.js": "text/javascript; charset=utf-8", "/app.css": "text/css; charset=utf-8", "/pricing.json": "application/json"}
+		kind, ok := kinds[name]
+		if !ok {
 			http.NotFound(w, r)
 			return
 		}
-		data, e := assets.ReadFile("assets" + path)
+		data, e := assets.ReadFile("assets" + name)
 		if e != nil {
 			http.NotFound(w, r)
 			return
 		}
-		kinds := map[string]string{"/index.html": "text/html; charset=utf-8", "/app.js": "text/javascript; charset=utf-8", "/app.css": "text/css; charset=utf-8", "/pricing.json": "application/json"}
-		w.Header().Set("Content-Type", kinds[path])
+		w.Header().Set("Content-Type", kind)
 		_, _ = w.Write(data)
 		return
 	}
+
 	got := r.Header.Get("Authorization")
 	want := "Bearer " + s.token
 	if len(got) != len(want) || subtle.ConstantTimeCompare([]byte(got), []byte(want)) != 1 {
@@ -269,4 +280,72 @@ func decode(w http.ResponseWriter, r *http.Request, v any) error {
 		return protocol.Fail("INVALID_ARGUMENT", "Invalid or oversized console request")
 	}
 	return nil
+}
+
+// The owner's exported landing runs with a page-specific policy. The authenticated
+// console retains its stricter policy; no third-party analytics/form origins open.
+func (s *Server) serveLanding(w http.ResponseWriter, r *http.Request) bool {
+	name := r.URL.Path
+	if name == "/landing-style.css" {
+		data, _ := landing.ReadFile("landing/style.css")
+		w.Header().Set("Content-Type", "text/css; charset=utf-8")
+		_, _ = w.Write(data)
+		return true
+	}
+	if strings.HasPrefix(name, "/fonts/") {
+		if path.Clean(name) != name {
+			http.NotFound(w, r)
+			return true
+		}
+		data, e := landing.ReadFile("landing" + name)
+		if e != nil {
+			http.NotFound(w, r)
+			return true
+		}
+		w.Header().Set("Content-Type", mime.TypeByExtension(path.Ext(name)))
+		_, _ = w.Write(data)
+		return true
+	}
+	if name == "/landing-bridge.js" {
+		data, _ := landing.ReadFile("landing/bridge.js")
+		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+		_, _ = w.Write(data)
+		return true
+	}
+	if strings.HasPrefix(name, "/framerusercontent.com/") {
+		if path.Clean(name) != name || strings.Contains(name, "\\") {
+			http.NotFound(w, r)
+			return true
+		}
+		data, e := landing.ReadFile("landing" + name)
+		if e != nil {
+			http.NotFound(w, r)
+			return true
+		}
+		kind := mime.TypeByExtension(path.Ext(name))
+		if path.Ext(name) == ".mjs" {
+			kind = "text/javascript; charset=utf-8"
+		}
+		if kind == "" {
+			http.NotFound(w, r)
+			return true
+		}
+		w.Header().Set("Content-Type", kind)
+		_, _ = w.Write(data)
+		return true
+	}
+	if name != "/" && name != "/pricing" {
+		return false
+	}
+	data, _ := landing.ReadFile("landing/index.html")
+	if name == "/pricing" {
+		// Export includes the pricing route module; render it client-side instead of
+		// hydrating the homepage DOM as though it were the pricing page.
+		data = regexp.MustCompile(`data-framer-hydrate-v2="[^"]*"`).ReplaceAll(data, nil)
+		data = regexp.MustCompile(`data-framer-hydrate-v2='[^']*'`).ReplaceAll(data, nil)
+	}
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(data)
+	return true
 }
