@@ -10,7 +10,11 @@ import (
 )
 
 func TestCentralMachineSelectionConflictsAndGuestArgv(t *testing.T) {
-	root, e := os.MkdirTemp("/private/tmp", "af-cli-")
+	base, e := filepath.EvalSymlinks("/tmp")
+	if e != nil {
+		t.Fatal(e)
+	}
+	root, e := os.MkdirTemp(base, "af-cli-")
 	if e != nil {
 		t.Fatal(e)
 	}

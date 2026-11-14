@@ -21,14 +21,14 @@ type RemovalPlan struct {
 	Entries        []string `json:"ownedEntries"`
 }
 
-var ownedEntries = map[string]bool{"state.json": true, "machine.yaml": true, "config.sha256": true, "debian-arm64.qcow2": true, "guest_host": true, "guest_host.pub": true, "control": true, "control.pub": true, "known_hosts": true, "lima": true, "tmp": true, "events.jsonl": true, "input-lease.json": true, "viewer-change.json": true, "backend.jsonl": true, ".agent-linux-owner": true, "lock": true}
+var ownedEntries = map[string]bool{"recovery-confirmed.json": true, "checkpoints": true, "recovery": true, "state.json": true, "machine.yaml": true, "config.sha256": true, "debian-arm64.qcow2": true, "guest_host": true, "guest_host.pub": true, "control": true, "control.pub": true, "known_hosts": true, "lima": true, "tmp": true, "events.jsonl": true, "input-lease.json": true, "viewer-change.json": true, "backend.jsonl": true, ".agent-linux-owner": true, "lock": true}
 
 func (c *Controller) removalPlan(id, action string) (State, RemovalPlan, error) {
 	s, e := c.load()
 	if e != nil {
 		return s, RemovalPlan{}, e
 	}
-	p := RemovalPlan{Action: action, MachineID: s.MachineID, StateDirectory: c.Root, Removes: []string{"selected VM disk and all guest data", "private Lima namespace, generated keys, configuration and cached base image"}, Preserves: []string{"application ownership marker and lock", "all files outside this state directory"}}
+	p := RemovalPlan{Action: action, MachineID: s.MachineID, StateDirectory: c.Root, Removes: []string{"selected VM disk and all guest data", "private Lima namespace, generated keys, configuration and cached base image", "all selected-machine disk checkpoints and recovery data"}, Preserves: []string{"application ownership marker and lock", "all files outside this state directory"}}
 	if !protocol.ValidID(id) || s.MachineID != id {
 		return s, p, errors.New("machine ID does not match selected state; inspect status and pass --machine-id exactly")
 	}

@@ -145,6 +145,9 @@ func (c *Controller) upLocked(ctx context.Context, spec config.Spec, creationFla
 	if e != nil {
 		return s, e
 	}
+	if e = c.allowBoot(ctx, s); e != nil {
+		return s, e
+	}
 	if s.State == "deleting" {
 		return s, errors.New("interrupted deletion; finish delete/reset with the original machine ID before starting")
 	}
@@ -228,6 +231,9 @@ func (c *Controller) upLocked(ctx context.Context, spec config.Spec, creationFla
 	s.Observed = "Running"
 	s.Stage = "desktop_ready"
 	s.Guest = g
+	if e = c.confirmRecovery(ctx, s); e != nil {
+		return c.fail(&s, e)
+	}
 	if e = c.save(&s); e != nil {
 		return s, e
 	}
@@ -243,6 +249,7 @@ func (c *Controller) Status(ctx context.Context) (State, error) {
 	if e != nil {
 		return s, e
 	}
+	if err:=c.allowBoot(ctx,s);err!=nil { s.Stage="recovery_required"; return s,err }
 	if s.State == "not_created" {
 		return s, nil
 	}
@@ -359,6 +366,7 @@ func (c *Controller) GuestCall(ctx context.Context, q protocol.Request) (*protoc
 	if e != nil {
 		return nil, e
 	}
+	if e=c.allowBoot(ctx,s);e!=nil{return nil,e}
 	if s.State == "deleting" {
 		return nil, protocol.Fail("NOT_READY", "deletion in progress; finish explicit delete/reset")
 	}

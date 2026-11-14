@@ -198,14 +198,14 @@ function renderLocal(result) {
  $('max-duration').textContent=value.budget.memoryGiB+' GiB';
  $('fleet').replaceChildren(...value.machines.map(m=>{
   const row=node('article',undefined,'machine-row'),name=node('div'),state=node('div'),actions=node('div',undefined,'row-actions');
-  const job=result.jobs[m.id];const phase=job?.state==='starting'?'starting':m.state;
+  const job=result.jobs[m.id];const phase=job?.state==='starting'?(job.operation||'starting'):m.state;
   name.append(node('strong',m.name),node('small',m.id.slice(0,10)+' · local VZ'));
   state.append(node('span','● '+phase.toUpperCase(),'machine-state'),node('small',m.cpus+' vCPU · '+m.memoryGiB+' GiB · persistent disk'));
   if(job?.state==='error') state.append(node('small',job.error));
   const view=node('button','Open ↗');view.disabled=phase!=='ready';view.addEventListener('click',()=>openViewer(m.id,view));
   const start=node('button','Start');start.disabled=!['stopped','not_created','error'].includes(phase);start.addEventListener('click',async()=>{start.disabled=true;try{await api('local/machines/'+m.id+'/start','POST',{});await refresh();}catch(e){notice(e.message,true);}});
   const stop=node('button','Stop');stop.disabled=!['ready','error','unavailable'].includes(phase);stop.addEventListener('click',()=>stopMachine(m,stop));
-  actions.append(view,start,stop);row.append(name,state,actions);return row;
+  const recovery=node('button','Recovery');recovery.disabled=job?.state==='starting';recovery.addEventListener('click',()=>openRecovery(m));actions.append(view,start,stop,recovery);row.append(name,state,actions);return row;
  }));
  if (!value.machines.length) {const empty=node('div',undefined,'empty');empty.append(node('h3','Your first Linux workspace.'),node('p','Create a named machine here, or run agent-linux start --machine work. Existing custom namespaces can be explicitly registered through the CLI.'));$('fleet').append(empty);}
  const pairs=[['Local software','Free'],['Managed allocation limits',value.budget.cpus+' vCPU / '+value.budget.memoryGiB+' GiB'],['Persistence','Saved files survive stop and restart'],['Scope',value.scope]];
@@ -218,3 +218,22 @@ async function createLocal(){
  catch(e){notice(e.message+' Refresh the inventory before retrying; creation is never replayed automatically.',true);$('create-dialog').close();}
  finally{mutating=false;$('confirm-create').disabled=false;enableCreate();}
 }
+
+let recoveryMachine=null;
+async function openRecovery(machine){
+ try{const result=await api('local/machines/'+machine.id+'/checkpoints');recoveryMachine=machine;$('recovery-title').textContent=machine.name+' · recovery';const nodes=result.checkpoints.map(c=>node('p',c.name+' · '+c.status+' · '+new Date(c.createdAt).toLocaleString()));if(!nodes.length)nodes.push(node('p','No disk checkpoints yet.'));if(result.recovery)nodes.push(node('p','Pending '+result.recovery.kind+': '+result.recovery.phase+'. Rollback stays until a verified guest boot.'));$('checkpoint-list').replaceChildren(...nodes);$('recovery-confirm').checked=false;updateRecoveryWarning();$('recovery-dialog').showModal();}catch(e){notice(e.message,true);}
+}
+function updateRecoveryWarning(){
+ const action=$('recovery-action').value;
+ const warning={create:'Create a stopped-disk checkpoint. Maximum three per machine; old checkpoints are never silently deleted.',restore:'Replaces saved guest disk/configuration. Changes since the checkpoint will be lost. Rollback is retained until a fresh guest handshake. Start Linux explicitly afterward.',delete:'Permanently deletes the selected checkpoint. This does not reset the running computer.',recover:'Resume finishes an interrupted file installation. Rollback uses the preserved pre-operation disk. VM must be stopped; boot explicitly afterward.', 'desktop-restart':'Restarts the graphical session in the running guest. Unsaved application work can be lost. This does not restart the VM.', 'helper-upgrade':'Creates a stopped-disk checkpoint, stages the bundled helper-only upgrade, then boots and verifies it. Saved projects/identity persist. A failure retains rollback data.'};
+ $('recovery-warning').textContent=warning[action];
+ const named=['create','restore','delete'].includes(action);$('checkpoint-name').required=named;$('checkpoint-name').hidden=!named;$('checkpoint-name').disabled=!named;document.querySelector('label[for="checkpoint-name"]').hidden=!named;
+ $('recovery-mode').hidden=action!=='recover';$('recovery-mode').disabled=action!=='recover';document.querySelector('label[for="recovery-mode"]').hidden=action!=='recover';
+ $('recovery-confirm').required=action!=='create';$('recovery-confirm').closest('label').hidden=action==='create';
+}
+$('recovery-action').addEventListener('change',updateRecoveryWarning);
+$('recovery-form').addEventListener('submit',async event=>{
+ if(event.submitter?.value!=='apply')return;event.preventDefault();if(!recoveryMachine||mutating)return;
+ const action=$('recovery-action').value;mutating=true;
+ try{await api('local/machines/'+recoveryMachine.id+'/recovery','POST',{action,name:$('checkpoint-name').value,mode:$('recovery-mode').value,confirm:$('recovery-confirm').checked});$('recovery-dialog').close();await refresh();}catch(e){notice(e.message+' Inspect current status before retrying.',true);$('recovery-dialog').close();}finally{mutating=false;enableCreate();}
+});

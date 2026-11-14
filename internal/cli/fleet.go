@@ -61,7 +61,7 @@ func selectMachine(ctx context.Context, args []string) (context.Context, []strin
 		return ctx, args, nil
 	}
 	cmd := args[0]
-	eligible := map[string]bool{"start": true, "up": true, "status": true, "stop": true, "logs": true, "doctor": true, "view": true, "mcp": true, "mcp-config": true, "copy-in": true, "copy-out": true, "delete": true, "reset": true, "screenshot": true, "move": true, "click": true, "drag": true, "scroll": true, "type": true, "key": true, "open": true, "exec": true, "browsers": true, "packages": true}
+	eligible := map[string]bool{"checkpoint": true, "desktop": true, "helper": true, "start": true, "up": true, "status": true, "stop": true, "logs": true, "doctor": true, "view": true, "mcp": true, "mcp-config": true, "copy-in": true, "copy-out": true, "delete": true, "reset": true, "screenshot": true, "move": true, "click": true, "drag": true, "scroll": true, "type": true, "key": true, "open": true, "exec": true, "browsers": true, "packages": true}
 	if !eligible[cmd] {
 		return ctx, args, nil
 	}
@@ -192,8 +192,11 @@ func selectMachine(ctx context.Context, args []string) (context.Context, []strin
 	}
 	selected := selection{Manager: manager, Entry: entry, Pin: entry.ID}
 	at := 1
-	if cmd == "browsers" || cmd == "packages" {
+	if cmd == "browsers" || cmd == "packages" || cmd == "desktop" || cmd == "helper" || cmd == "checkpoint" {
 		at = min(2, len(cleaned))
+	}
+	if cmd == "checkpoint" && len(cleaned) > 2 && !strings.HasPrefix(cleaned[2], "-") {
+		at = 3
 	}
 	result := append([]string{}, cleaned[:at]...)
 	result = append(result, "--state-dir", entry.Root)

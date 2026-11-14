@@ -171,3 +171,39 @@ func (d *localDashboard) Computer(ctx context.Context, id string) (machine.Machi
 	c.ControlOwner = protocol.ID()
 	return machine.Local{Controller: c}, nil
 }
+
+func (d *localDashboard) Checkpoints(ctx context.Context, id string) (any, error) {
+	c, e := d.controller(ctx, id)
+	if e != nil {
+		return nil, e
+	}
+	list, pending, e := c.Checkpoints(ctx)
+	if e != nil {
+		return nil, e
+	}
+	rows := []map[string]any{}
+	for _, v := range list {
+		rows = append(rows, map[string]any{"name": v.Name, "createdAt": v.Created, "status": v.Status})
+	}
+	var recovery any
+	if pending != nil {
+		recovery = map[string]string{"kind": pending.Kind, "phase": pending.Phase, "checkpoint": pending.Name}
+	}
+	return map[string]any{"checkpoints": rows, "recovery": recovery}, nil
+}
+func (d *localDashboard) Recovery(ctx context.Context, id, action, name, mode string) (any, error) {
+	c, e := d.controller(ctx, id)
+	if e != nil {
+		return nil, e
+	}
+	switch action {
+	case "desktop-restart":
+		return c.RestartDesktop(ctx, id)
+	case "helper-upgrade":
+		return c.UpgradeHelper(ctx, id, defaultGuestBinary())
+	case "create", "restore", "delete", "recover":
+		return c.Checkpoint(ctx, action, name, mode, id)
+	default:
+		return nil, protocol.Fail("UNSUPPORTED_OPERATION", "Unknown recovery action.")
+	}
+}

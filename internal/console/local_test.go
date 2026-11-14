@@ -89,3 +89,32 @@ func TestLocalDashboardAuthStartDedupStopConfirmationAndNoCapture(t *testing.T) 
 	}
 	close(d.wait)
 }
+
+func (d *localDouble) Checkpoints(context.Context, string) (any, error) {
+	return map[string]any{"checkpoints": []any{}, "recovery": nil}, nil
+}
+func (d *localDouble) Recovery(context.Context, string, string, string, string) (any, error) {
+	return nil, nil
+}
+func TestLocalRecoveryRequiresAuthAndExplicitConsent(t *testing.T) {
+	s, e := New(nil)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer s.Close()
+	s.EnableLocal(&localDouble{wait: make(chan struct{})})
+	id := "0123456789abcdef0123456789abcdef"
+	path := "/api/local/machines/" + id
+	if request(t, s, "GET", path+"/checkpoints", "", false).Code != 401 {
+		t.Fatal("unauthorized checkpoints")
+	}
+	if request(t, s, "GET", path+"/checkpoints", "", true).Code != 200 {
+		t.Fatal("checkpoint list failed")
+	}
+	if request(t, s, "POST", path+"/recovery", `{"action":"restore","name":"safe"}`, true).Code != 409 {
+		t.Fatal("restore without consent")
+	}
+	if request(t, s, "POST", path+"/recovery", `{"action":"restore","name":"safe","confirm":true,"stateDirectory":"/"}`, true).Code != 409 {
+		t.Fatal("arbitrary host path accepted")
+	}
+}

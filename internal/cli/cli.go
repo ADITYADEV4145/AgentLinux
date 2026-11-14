@@ -32,6 +32,9 @@ import (
 const Help = `agent-linux: an agent-ready Linux machine (local developer release candidate)
 
 Usage: agent-linux COMMAND [options]
+  checkpoint      Stopped-VM disk checkpoints and explicit recovery
+  desktop restart Explicit graphical-session restart (unsaved work warning)
+  helper upgrade  Explicit checkpoint-backed guest-helper upgrade
   machines        Named local inventory, registration and aggregate resource budgets
   dashboard       Local web console; optional private development cloud config
   doctor          Read-only host, runtime and resource diagnostics
@@ -271,6 +274,9 @@ func runCommand(ctx context.Context, args []string, out, errout io.Writer) int {
 		if f, ok := out.(*os.File); ok && term.IsTerminal(int(f.Fd())) && term.IsTerminal(int(os.Stdin.Fd())) {
 			return runStart(ctx, nil, out, errout)
 		}
+	}
+	if len(args) > 0 && (args[0] == "checkpoint" || args[0] == "desktop" || args[0] == "helper") {
+		return runRecovery(ctx, args, out, errout)
 	}
 	if len(args) > 0 && args[0] == "dashboard" {
 		return runDashboard(ctx, args[1:], out, errout)

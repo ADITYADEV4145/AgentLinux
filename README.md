@@ -133,3 +133,20 @@ agent-linux dashboard --cloud-config /absolute/private/alice.json
 The default dashboard manages named **local** machines: create, start, inspect actual readiness, open an on-demand interactive viewer and explicitly stop. Saved guest files persist across stop/restart. Aggregate defaults: half host RAM and host logical CPUs minus two (minimum one); these cover managed guest allocations, not every process or unmanaged VM on your Mac. [Names, registration, budgets and limits](docs/local-machines.md). Explicit cloud mode remains a separate **SIMULATED** development prototype unless configured otherwise; real hosted acceptance is pending. [Console setup and boundaries](docs/web-console.md).
 
 Owner-selected display pricing: **$1/h Desktop**, or **$20/month / $200/year** with 30 hours each month; **$2/h Builder (planned)**, or **$40/month / $450/year** with 30 hours each month. Cloud sales and subscription entitlements are not active; the stress model still exposes loss-making scenarios. [Pricing assumptions and activation gate](docs/pricing-targets.md). The [public landing website](https://agent-linux.netlify.app) is deployed on Netlify; [deployment boundaries and update instructions](docs/netlify.md). No paid service or binary release was published. [Source comparison with terminal-mac](docs/terminal-mac-comparison.md) and [follow-up verification](docs/product-polish-verification.md).
+
+## Disk checkpoints and explicit recovery
+
+Stop the selected machine before creating/restoring its disk checkpoint:
+
+```sh
+agent-linux checkpoint create before-update --machine work
+agent-linux checkpoint list --machine work --json
+agent-linux checkpoint restore before-update --machine work
+```
+
+Restore first prints a data-loss plan; apply only with the exact printed
+`--machine-id` and `--yes`, then start explicitly. Checkpoints preserve saved disk
+state, not running memory or unsaved buffers. Maximum three per machine, with no
+silent eviction. The local dashboard's **Recovery** action also supports explicit
+graphical restart and checkpoint-backed guest-helper upgrade. [Semantics,
+interruption recovery and verified limits](docs/checkpoints.md).

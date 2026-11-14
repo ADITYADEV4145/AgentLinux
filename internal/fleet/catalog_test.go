@@ -16,7 +16,11 @@ import (
 
 func fixture(t *testing.T) *Manager {
 	t.Helper()
-	root, e := os.MkdirTemp("/private/tmp", "af-test-")
+	base, e := filepath.EvalSymlinks("/tmp")
+	if e != nil {
+		t.Fatal(e)
+	}
+	root, e := os.MkdirTemp(base, "af-test-")
 	if e != nil {
 		t.Fatal(e)
 	}

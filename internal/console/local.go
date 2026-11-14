@@ -22,9 +22,10 @@ type LocalComputer interface {
 	Computer(context.Context, string) (machine.Machine, error)
 }
 type localJob struct {
-	ID    string `json:"machineId"`
-	State string `json:"state"`
-	Error string `json:"error,omitempty"`
+	ID        string `json:"machineId"`
+	State     string `json:"state"`
+	Error     string `json:"error,omitempty"`
+	Operation string `json:"operation,omitempty"`
 }
 
 func (s *Server) EnableLocal(local LocalComputer) { s.local = local; s.jobs = map[string]localJob{} }
@@ -64,11 +65,18 @@ func (s *Server) localRequest(w http.ResponseWriter, r *http.Request, ctx contex
 		return true
 	}
 	parts := strings.Split(route, "/")
-	if len(parts) != 3 || parts[0] != "machines" || !protocol.ValidID(parts[1]) || r.Method != "POST" {
+	if len(parts) != 3 || parts[0] != "machines" || !protocol.ValidID(parts[1]) {
 		http.NotFound(w, r)
 		return true
 	}
 	id, action := parts[1], parts[2]
+	if s.localRecoveryRequest(w, r, ctx, id, action) {
+		return true
+	}
+	if r.Method != "POST" {
+		http.NotFound(w, r)
+		return true
+	}
 	var q struct {
 		Confirm bool `json:"confirm"`
 	}
@@ -119,6 +127,11 @@ func (s *Server) localRequest(w http.ResponseWriter, r *http.Request, ctx contex
 func (s *Server) localStart(w http.ResponseWriter, id string) {
 	s.mu.Lock()
 	if job, ok := s.jobs[id]; ok && job.State == "starting" {
+		if job.Operation != "" {
+			s.mu.Unlock()
+			send(w, nil, protocol.Fail("MACHINE_BUSY", "Recovery operation in progress; inspect it before starting."))
+			return
+		}
 		s.mu.Unlock()
 		w.WriteHeader(http.StatusAccepted)
 		send(w, job, nil)

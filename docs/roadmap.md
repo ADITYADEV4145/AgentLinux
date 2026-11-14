@@ -81,3 +81,16 @@ Installed-product real-Mac review, patch toolchain revalidation, native agent/fo
 Implemented: interactive bare-command launcher; private cross-process viewer invalidation; owner-scoped account inventory and fresh-deployment opt-in concurrency two; original responsive landing page and localhost console with real backend session actions and viewer handoff; configured candidate pricing and stress-model evaluation. See `web-console.md`, `pricing-targets.md`, `terminal-mac-comparison.md` and `product-polish-verification.md`.
 
 Still gated: persistent capture transport and measured renderer optimizations; public signed/notarized distribution; real multi-session provider acceptance/commercial rights; production identity/TLS/database/abuse prevention; validated margins/bandwidth policy; Builder provider profile; live billing; public hosting/launch authorization. The console adds no invented working cloud backend.
+
+## Local hardening follow-up (2026-11-14)
+
+Completed source milestones: reproducible disposable baseline; viewer-owned persistent
+capture channels/asynchronous terminal capture (fresh native Kitty visual gate still
+pending); named local machines, aggregate allocation admission and local dashboard;
+stopped raw-disk checkpoints, durable explicit recovery, desktop restart and verified
+checkpoint-backed helper upgrade. See [current verification](local-hardening-verification.md).
+
+Next: negotiated guest capture worker, complete human pointer gestures/held-input
+cleanup, then screenshot-conditioned agent observation IDs and bounded reconnect/
+recovery acceptance. Cloud/billing and public binary signing remain outside this effort.
+The separately authorized public landing is deployed; local VM recovery APIs stay local.

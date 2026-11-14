@@ -45,8 +45,10 @@ connection-reuse measurements remain Phase 1 acceptance work.
   change committed separately in `190c38d`; actual desktop/mobile inspection.
 - Phase 0 measurement complete. Existing full repository checks passed at the
   site baseline; additional viewer edits are deliberately outside that baseline.
-- Phases 1–5 remain in progress until their checks and hardware evidence are
-  recorded. No broader reliability or smoothness claim is made.
+- Phase 1 source and comparative measurements are recorded below; its fresh native
+  Kitty visual gate remains pending. Phases 2 and 3 have their scoped acceptance
+  evidence below. Phases 4 and 5 (capture/human gestures and agent recovery) remain
+  next. No broader reliability or smoothness claim is made.
 
 ## Phase 1 implementation and bounded comparison — 2026-11-14
 
@@ -153,3 +155,59 @@ Saved Unicode files survived the explicit research stop/restart. Both disposable
 test VMs were explicitly stopped after acceptance, freeing their RAM; disks remain
 private for later recovery tests. Disk checkpoints/helper upgrade, capture worker/full
 pointer gestures and observation/recovery hardening are subsequent phases.
+
+## Phase 3 — Stopped disk checkpoints and recovery (2026-11-14)
+
+Implemented same-machine disk/EFI/configuration checkpoints, three-checkpoint limit,
+APFS clone or bounded sparse-copy fallback, SHA-256 validation, exact-ID confirmation,
+staged installation, synced recovery journal/rollback and durable readiness-confirmed
+cleanup receipt. Interrupted staging/install/rollback/helper metadata never silently
+boots or resets. Local CLI and authenticated dashboard expose explicit recovery,
+graphical restart and checkpoint-backed helper upgrade. Original code adds no new
+external dependency. [Semantics and commands](checkpoints.md), [ADR](decisions/0015-stopped-disk-checkpoints.md).
+
+Actual Mac: same Apple M4 Pro, 24 GiB RAM, macOS 26.5 (25F71), Go 1.26.9,
+Lima 2.2.1/VZ; disposable 2-vCPU/4-GiB/8-GiB raw-disk Debian 13 ARM64 Xfce guest,
+helper 0.6.0/protocol 2.0. The personal workstation remained untouched.
+
+- Created stopped checkpoints with APFS cloning for all six files. Running creation
+  was refused. Modified a saved Unicode editor document and an independent saved
+  configuration, stopped, restored and explicitly booted. Both original contents
+  returned; machine ID stayed fixed, guest session changed, rollback existed before
+  boot and was removed only after actual handshake.
+- One measured run: creation **4.268 s**, restore staging/validation/install **16.354 s**,
+  explicit restored boot **7.833 s** (preceding warm start **9.389 s**). Includes CLI
+  overhead and full logical-file hashing. These are single-run observations, not
+  distributions, an instantaneous-reset claim or future hardware guarantees.
+- Explicit helper upgrade created its own before-helper checkpoint (third slot),
+  updated sealed helper-only provisioning, booted successfully and independently
+  matched `/usr/local/bin/agent-linux-guest` SHA-256 to the selected built binary.
+  Saved configuration and machine identity persisted. Version remains 0.6.0; this
+  validates the upgrade mechanism, not an unimplemented future protocol migration.
+- Explicit graphical restart reached a different desktop generation with unchanged
+  guest service session/boot identity. Saved configuration persisted; no host input
+  or clipboard was used. Raw disk/EFI preservation was tested, not ASIF or memory state.
+- Local dashboard listed actual checkpoints, action-specific restore warnings and
+  required unchecked consent. Desktop and 390px mobile dialog were visually checked;
+  no horizontal overflow. No destructive web action was applied during UI inspection.
+
+Automated evidence includes cancellation/incomplete-creation cleanup, sparse fallback
+and insufficient-space injection, interrupted staging/install/resume/rollback, failed
+handshake retaining rollback, interrupted confirmation cleanup, origin/compatibility,
+malformed/trailing metadata, path/size limits, symlink/hardlink rejection, unknown files,
+CLI preview/confirmation and authenticated dashboard schema/consent. `make build test check` and JS syntax validation passed for the final source,
+including all race-enabled Go and existing Python checks. The checkpoint test executable was cross-compiled for Linux ARM64, transferred
+with a SHA-256 check through the bounded guest file channel, and **all checkpoint
+tests passed inside the actual Debian guest**, including sparse-copy and interruption
+cases. Those Linux tests were non-race; race-enabled checks ran on the Mac. Test temp paths were corrected to
+work on Linux CI as well as the Mac, rather than assuming `/private/tmp` exists there.
+
+Limits: no real power-cut test, non-APFS physical volume acceptance, ASIF/backing-chain
+restore, independent security review or real-Mac low-disk exhaustion test. Sparse-copy
+and low-space behavior use meaningful doubles. Native Kitty re-acceptance remains
+pending from Phase 1. Capture worker/full human gestures and agent observation/recovery
+are subsequent phases. Private evidence and VM/checkpoint contents are not committed;
+public Netlify deployment, cloud and unfinished Stripe work were not changed.
+A final real restore repeated receipt-based cleanup successfully; a fourth checkpoint
+was refused, preview required confirmation, explicit checkpoint deletion passed, and
+the disposable VM was stopped with two private checkpoints retained.

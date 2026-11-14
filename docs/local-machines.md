@@ -92,3 +92,5 @@ No host path can be supplied through the web API. The frontend never receives SS
 keys or provider credentials. Resource shortages and failed readiness remain
 visible; mutations are not automatically replayed. Local usage needs no payment
 account. Cloud mode is separate and remains experimental.
+
+For stopped disk checkpoints, recovery and helper upgrades, see [checkpoint guide](checkpoints.md). These operations require explicit user actions and are not autonomous MCP tools.
